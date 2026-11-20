@@ -6,7 +6,7 @@ job needs, before any scene is built.
 
 Right hand: the smoother pinched across its 2 mm plate, the plate upright in a vertical plane that stands out from
 the cake's right side, its straight edge upright against the icing with the lower corner on the cake board. Two
-readings of which edge is straight: "long" (152 mm upright, the plate standing out 102 mm) and "short" (102 mm
+readings of which edge is straight: "long" (152 mm upright, the plate standing out 96.5 mm) and "short" (96.5 mm
 upright, standing out 152 mm). The hand pinches near the plate's far end, coming in at ``approach`` degrees from
 straight down within the plate's plane (0: down onto the plate's top edge; 90: level, along the plate towards
 the cake). For each pose: the IK's error, the smallest joint margin, and how far the edge's middle gives under 1 N
@@ -30,7 +30,7 @@ STAND_TOP = 0.127  # m: the turntable's top over the bench (Ateco 612, 127 mm hi
 RIM_R = 0.1525  # m: the top's radius (305 mm across)
 BOARD_T, MAT_T = 0.002, 0.002  # m: cake board and non-slip mat (a)
 CAKE_R, CAKE_H, ICING = 0.076, 0.102, 0.005  # m: dummy radius and height; icing on the side
-PLATE = {"long": (0.152, 0.102), "short": (0.102, 0.152)}  # straight edge upright: (upright length, standing out)
+PLATE = {"long": (0.152, 0.0965), "short": (0.0965, 0.152)}  # straight edge upright: (upright length, standing out)
 PINCH_IN = 0.015  # m: the grasp point this far in from the plate's edges it is pinched near
 TIP = 0.0129  # m: the closed fingertips' ends past the grasp point
 PRESS = 0.002  # m: the fingertips this far into the turntable's top (a press)

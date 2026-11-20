@@ -337,8 +337,9 @@ def main() -> int:
 
             def extra() -> dict:
                 r = m.report()
-                return {"unevenness (mm)": r["unevenness in 50 mm (mm)"], "mean (mm)": r["mean thickness (mm)"], "thinnest, thickest (mm)": r["thinnest, thickest (mm)"],
-                        "ridged columns": m.COLUMNS - r["columns with ridges under 1.5 mm"], "worked": r["columns worked"], "bare": r["bare cells"], "flaw": r["one flaw"],
+                return {"gap under the rule (mm)": r["largest gap, rule upright (mm)"], "gap under the gauge (mm)": r["largest gap, arc gauge (mm)"], "pins (mm)": r["pin readings' mean (mm)"],
+                        "mean (mm)": r["mean thickness of the band (mm)"], "thinnest, thickest (mm)": r["thinnest, thickest (mm)"],
+                        "marks with ridges": m.MARKS - r["marks with the rule's gap under 1.5 mm"], "worked": r["columns worked"], "bare": r["bare cells"], "flaw": r["one flaw"],
                         "roll (mm3)": r["roll on the edge (mm3)"], "on the blade (mm3)": r["on the blade's face (mm3)"], "spin (deg)": round(math.degrees(mk.joint("spin")), 1),
                         "cut force (N)": [round(float(v), 3) for v in m.STATE["force"]], "contact rows": len(m.STATE["contact"] or {}),
                         "edge from the foam, row 17 (mm)": None if 17 not in (m.STATE["contact"] or {}) else round(1000 * m.STATE["contact"][17][1], 3),
@@ -353,7 +354,7 @@ def main() -> int:
             firsts = {level: next((row["t"] for row, s in zip(rows, scores) if s >= level), None) for level in (0.25, 0.5, 0.75, 1.0)}
             parts = m.regions()
             readings = {"score": scores[-1], "first reached": firsts, "seconds": rows[-1]["t"], "ended": result.get("termination_reason"), "strokes": plan.strokes,
-                        "high to low within 50 mm: plain side, over the scar (mm)": [round(1000 * parts["plain side"], 3), round(1000 * parts["over the scar"], 3)],
+                        "largest gap under the rule or the gauge: plain side, over the scar (mm)": [round(1000 * parts["plain side"], 3), round(1000 * parts["over the scar"], 3)],
                         "report": result["report"], "worst IK": result["worst_ik"], "end": rows[-1]["extra"]}  # fmt: skip
             (folder / "readings.json").write_text(json.dumps(readings, indent=1, default=str))
             np.save(folder / "field.npy", m.STATE["field"])

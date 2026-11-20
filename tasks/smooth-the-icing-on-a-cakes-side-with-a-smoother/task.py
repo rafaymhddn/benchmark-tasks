@@ -1,6 +1,6 @@
 """A cake stands on a revolving cake stand: a decorator's foam practice round on a cake board, iced on its side about
-5 mm thick and combed once round with the coarse teeth of a decorating comb, so that ridges run round it and the
-comb's take-off has left a scar down the side. The stand's aluminium top turns freely on its cast-iron base, which
+5 mm thick and turned once under the coarse teeth of a decorating comb held in a jig, so that ridges run round it and
+the comb's take-off has left a scar down the side. The stand's aluminium top turns freely on its cast-iron base, which
 stands loose on its pad. A decorating comb and icing smoother, an aluminium plate with three toothed edges and one
 straight edge, stands on a short edge in the groove of a beech block, leaning on the block's back, its straight edge
 upright.
@@ -35,7 +35,7 @@ SCENE = "station"
 SCORE_OVER = "end"
 SUCCESS_HOLD_S = 1.0
 INSTRUCTION = "Smooth the icing on the side of the cake with the smoother, then put the smoother back in its block."
-RUN_LIMIT_STEPS = 2700  # 135 s at 20 Hz: the reference run's length (about 102 s) and 30 %
+RUN_LIMIT_STEPS = 2700  # 135 s at 20 Hz: 35 % over the first submission's reference run (100 s), 42 % over the revised one (94.8 s)
 TOP = TABLE_TOP[SCENE]
 
 # --- the icing as a material: every number the simulation uses, with its source (one table; the README has it) ---
@@ -44,7 +44,7 @@ MATERIAL = {
     "ridge pitch": (0.006, "m", "the comb's coarse teeth, combed once round (assumed (a))"),
     "ridge height": (0.003, "m", "high to low (assumed (a))"),
     "scar height": (0.002, "m", "the comb's take-off, a ridge down the side, place by seed (assumed)"),
-    "out of round": (0.001, "m", "high to low once round, by seed, at most (assumed)"),
+    "out of round": (0.001, "m", "high to low once round, by seed, at most: the ridge tops within 0.5 mm of their radius, the reset's tolerance (assumed)"),
     "cut push": (4000.0, "Pa", "0.4 N per mm of depth per 100 mm of edge, along the turning and outward each (assumed, kitchen test)"),
     "roll": (10.0e-6, "m2", "the roll of icing along the edge that it fills from, in section: 10 mm2; what it cuts beyond that stays on the blade's face (assumed)"),
     "fill reach": (0.002, "m", "a cell this far under the edge is still filled from the roll (assumed)"),
@@ -96,10 +96,10 @@ for _j in range(COLUMNS):
         _cake.append(box((TILE_DEPTH, _tile_w, ROW_H * 1.02), pos=(_r * math.cos(_a), _r * math.sin(_a), (_k + 0.5) * ROW_H), yaw=_a, color=ICING, solid=False))
 body("cake", _cake, pos=tuple(CAKE_AT), mass=CAKE_MASS, color=FOAM)
 
-# --- the smoother: Ateco 1447 decorating comb and icing smoother, anodized aluminium plate 152 x 102 mm (retailers'
-# figures), 2 mm thick (a), 84 g by its size (a); three toothed edges and one straight edge; which edge is straight
-# is not given by the sellers: a long one is assumed (a) ---
-EDGE_L, PLATE_W, PLATE_T, SMOOTHER_MASS = 0.152, 0.102, 0.002, 0.084
+# --- the smoother: Ateco 1447 decorating comb and icing smoother, aluminium plate 6 x 3.8 in, 152 x 96.5 mm (the maker's
+# catalogue; retailers list 6 x 4 in), 2 mm thick (a), 79 g by its size (a); three toothed edges and one straight edge;
+# which edge is straight is not given: a long one is assumed (a) ---
+EDGE_L, PLATE_W, PLATE_T, SMOOTHER_MASS = 0.152, 0.0965, 0.002, 0.079
 # Its frame: the plate's middle; x across the plate towards the straight edge (at x = PLATE_W / 2), y through the
 # plate, z along the straight edge.
 # --- the beech block (a): a back 39 mm high, leaning LEAN from upright, and at its foot a groove 6 mm wide and 4 mm
@@ -139,8 +139,30 @@ _block = [
 BLOCK_DROP = 0.001  # m the block is built over the bench, so that it settles at the start: a body that never moves was not drawn in the first pictures (b2k44, b2k46: the block showed only once the hand had stirred it)
 body("block", _block, pos=(*BLOCK_AT, TOP + BLOCK_DROP), yaw=FACING, mass=BLOCK_MASS, color=BEECH, friction=(0.5, 0.45))
 _block_r = mk.axis_angle((0.0, 0.0, 1.0), FACING)
-PLATE_IN_BLOCK = (_block_r @ SLOT_TILT)  # the plate's frame in the world, standing in the groove: x along it, z up the back
-SMOOTHER_AT = np.array([*BLOCK_AT, TOP + BLOCK_DROP]) + _block_r @ (SLOT_AT + SLOT_TILT @ np.array([0.0, 0.0, EDGE_L / 2]))
+
+
+def _settled_lean() -> float:
+    """How much further than the groove the plate leans where it comes to rest (rad): its foot on the floor against the
+    lip, its back face on the back's top edge. With h = PLATE_T / 2, in the groove's frame:
+    (GROOVE_W - h cos d) cos d - (BACK_H - h sin d) sin d = h."""
+    h = PLATE_T / 2
+
+    def short(d: float) -> float:  # how far the back's top edge stands off the plate's back face (m)
+        return (GROOVE_W - h * math.cos(d)) * math.cos(d) - (BACK_H - h * math.sin(d)) * math.sin(d) - h
+
+    low, high = 0.0, 0.5
+    for _ in range(60):
+        middle = (low + high) / 2
+        low, high = (middle, high) if short(middle) > 0.0 else (low, middle)
+    return (low + high) / 2
+
+
+SETTLED = _settled_lean()  # 5.87 degrees: 35.9 from upright in all; the place rest trial b2k47 found it at, to 0.01 mm
+SMOOTHER_LIFT = 0.001  # m the plate is built up the groove from that place and drops into it at the start, as the block drops onto the bench: built upright in the groove (it settled 4 mm in the first step), it was missing from the harness's first two pictures, the block not (model run b2k50)
+_settle_r = mk.axis_angle((1.0, 0.0, 0.0), -SETTLED)
+_foot = np.array([0.0, _BACK_FACE - GROOVE_W + PLATE_T / 2 * math.cos(SETTLED), PLATE_T / 2 * math.sin(SETTLED) + SMOOTHER_LIFT])  # the middle of the plate's lower edge, in the groove's frame
+PLATE_IN_BLOCK = _block_r @ SLOT_TILT @ _settle_r  # the plate's frame in the world, standing in the groove: x along it, z up the back
+SMOOTHER_AT = np.array([*BLOCK_AT, TOP + BLOCK_DROP]) + _block_r @ (SLOT_AT + SLOT_TILT @ (_foot + _settle_r @ np.array([0.0, 0.0, EDGE_L / 2])))
 # A check of the hand's hold, not the task (trials.py hold): CAKE_SMOOTHER_AT = "x,y,z,qx,qy,qz,qw" builds the smoother
 # there, where the hand will pinch it, welded to the world until the check cuts the weld.
 HELD_AT = [float(v) for v in os.environ["CAKE_SMOOTHER_AT"].split(",")] if os.environ.get("CAKE_SMOOTHER_AT") else None
@@ -150,14 +172,23 @@ if HELD_AT:
     weld("smoother_held", "smoother", None)
 OBJECTS = list(mk.MECH.bodies.values())
 
-# --- the rules ---
-BAND = range(3, 31)  # rows read: from 10 mm over the board to 10 mm under the top (their middles 10.5 to 91.5 mm)
-WINDOW = 0.050  # m: high and low are compared within any 50 mm of the surface (up and round)
-EVEN = 0.0012  # m: at most this between high and low within a window for 1.0 (to be set from the hold trial: 1.0 to 1.5 mm)
+# --- the rules: the side is read as a bench reads it, at 16 marks on the cake board, every 22.5 degrees ---
+BAND = range(3, 31)  # rows read for gaps and bare places: from 9 mm over the board to 9 mm under the top
+MARKS = 16
+MARK_COLUMNS = np.arange(MARKS) * (COLUMNS // MARKS)  # the marks stand at the middles of columns 0, 6, ..., 90
+# Up: a steel rule held upright against the side at each mark rests on the side's two outermost points over its whole
+# height; the gaps under it are read in the band. Round: the arc gauge, a 50 mm chord of a circle of radius 81 mm (the
+# dummy's 76 mm and 5 mm), lies level on a spacer on the board at three heights and is centred on each mark in turn;
+# its 16 placements overlap (36 degrees each, 22.5 apart). Its edge, 3 mm thick, covers one row of the field.
+GAUGE_R, GAUGE_CHORD = 0.081, 0.050
+GAUGE_ROWS = (8, 16, 25)  # on spacers 24, 48 and 75 mm high: its edge touches 24 to 27, 48 to 51 and 75 to 78 mm over the board
+GAUGE_HALF = math.asin(GAUGE_CHORD / 2 / GAUGE_R) / CELL_ANGLE  # columns from the gauge's middle to either end: 4.79
+EVEN = 0.0012  # m: the largest gap under the rule or the gauge for 1.0 (a 1.2 mm feeler leaf does not go in)
 MARK_MOST, MARK_WIDE = 0.002, 4  # m a mark may stand at 0.75; columns it may span round
 BARE_SMALL = 2.0e-4  # m2: a bare place smaller than this (2 cm2) is one flaw
-LOW_RIDGES = 0.0015  # m: ridges under this on at least half the way round: 0.5
-THIN_MEAN = 0.003  # m: the mean thickness of the band at least this for 1.0
+LOW_RIDGES = 0.0015  # m: the gap under the upright rule under this at half the marks or more: 0.5
+THICK_ROW = 16  # the thickness is read with a depth pin at the marks, 48 to 51 mm over the board, after every other reading
+THIN_MEAN = 0.003  # m: the mean of those 16 readings at least this for 1.0
 CENTRED, OFF_PLACE = 0.005, 0.015  # m: the cake this near the top's axis for 1.0; the cake or the stand this far off its place: 0
 WORKED_QUARTER = COLUMNS // 4  # columns the edge has cut over at least half the band: 0.25
 CLEAR = 0.03  # m both hands' collision hulls keep from the smoother, the cake, the stand's top and the block
@@ -441,38 +472,70 @@ def band() -> np.ndarray:
     return STATE["field"][:, BAND.start : BAND.stop]
 
 
-def windows(values: np.ndarray, rows: int, columns: int) -> np.ndarray:
-    """(max - min) over every window of ``rows`` x ``columns`` cells (columns wrap round)."""
-    from numpy.lib.stride_tricks import sliding_window_view
-
-    wrapped = np.concatenate([values, values[: columns - 1]], axis=0)
-    view = sliding_window_view(wrapped, (columns, min(rows, values.shape[1])))
-    return view.max(axis=(2, 3)) - view.min(axis=(2, 3))
-
-
-WINDOW_ROWS = int(round(WINDOW / ROW_H))  # 17 rows
-WINDOW_COLUMNS = int(round(WINDOW / ((DUMMY_R + THICK) * CELL_ANGLE)))  # 9 columns
-
-
-def unevenness(values: np.ndarray | None = None) -> float:
-    """The most between high and low within any 50 mm of the band (m)."""
-    values = band() if values is None else values
-    return float(windows(values, WINDOW_ROWS, WINDOW_COLUMNS).max())
+def gaps_under(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """The gap at each point (x increasing, y outward) under a straight edge pressed onto the points from outside:
+    its depth under their outer convex hull. The edge rests on two hull points with the place between them, rocked
+    either way on a crown; a gap is read only between the points it rests on."""
+    hull: list[int] = []
+    for i in range(len(x)):
+        while len(hull) >= 2 and (x[hull[-1]] - x[hull[-2]]) * (y[i] - y[hull[-1]]) - (y[hull[-1]] - y[hull[-2]]) * (x[i] - x[hull[-1]]) >= 0.0:
+            hull.pop()  # the last point is not outside the line from the one before it to this one
+        hull.append(i)
+    return np.interp(x, x[hull], y[hull]) - y
 
 
-def regions(values: np.ndarray | None = None) -> dict:
-    """For the readings: the most between high and low within 50 mm on the plain side (windows clear of the comb's
-    scar) and in the windows over the scar's column (m)."""
-    values = band() if values is None else values
-    w = windows(values, WINDOW_ROWS, WINDOW_COLUMNS)  # w[j, k]: the window over columns j .. j + WINDOW_COLUMNS - 1
-    over = np.array([(STATE["scar"] - j) % COLUMNS < WINDOW_COLUMNS for j in range(COLUMNS)])
-    return {"plain side": float(w[~over].max()), "over the scar": float(w[over].max())}
+ROW_MIDDLES = (np.arange(ROWS) + 0.5) * ROW_H
 
 
-def ridges_per_column(values: np.ndarray | None = None) -> np.ndarray:
-    """Per column, the most between high and low within any 50 mm up the band (m)."""
-    values = band() if values is None else values
-    return windows(values, WINDOW_ROWS, 1)[:, :].max(axis=1)
+def upright_gaps(field: np.ndarray | None = None) -> np.ndarray:
+    """Per mark, the largest gap under the steel rule held upright against the side there, in the band (m)."""
+    field = STATE["field"] if field is None else field
+    return np.array([gaps_under(ROW_MIDDLES, field[j])[BAND.start : BAND.stop].max() for j in MARK_COLUMNS])
+
+
+def round_gaps(field: np.ndarray | None = None) -> np.ndarray:
+    """[height, mark]: the largest gap under the arc gauge at that height, centred on the mark (m). The gauge's ends
+    stand GAUGE_HALF columns either side of the mark's column, where the thickness is taken in a straight line between
+    the columns' middles. The thickness stands for the radius: the gauge's own curve is taken as the side's (its 81 mm
+    against a finished radius of 79 to 81 mm adds at most 0.1 mm at its ends; see the README)."""
+    field = STATE["field"] if field is None else field
+    n = math.ceil(GAUGE_HALF)  # the columns under the gauge: the mark's and n - 1 either side wholly, the n-th in part
+    reach = GAUGE_HALF - (n - 1)
+    x = np.concatenate([[-GAUGE_HALF], np.arange(1 - n, n), [GAUGE_HALF]])
+    out = np.zeros((len(GAUGE_ROWS), MARKS))
+    for a, k in enumerate(GAUGE_ROWS):
+        for b, j in enumerate(MARK_COLUMNS):
+            t = field[(j + np.arange(-n, n + 1)) % COLUMNS, k]
+            y = np.concatenate([[t[1] + reach * (t[0] - t[1])], t[1:-1], [t[-2] + reach * (t[-1] - t[-2])]])
+            out[a, b] = gaps_under(x, y).max()
+    return out
+
+
+def largest_gap(field: np.ndarray | None = None) -> float:
+    """The largest gap under the rule or the gauge anywhere they are laid (m)."""
+    return max(float(upright_gaps(field).max()), float(round_gaps(field).max()))
+
+
+def thickness_readings(field: np.ndarray | None = None) -> np.ndarray:
+    """The depth pin's readings at the 16 marks, 48 to 51 mm over the board (m)."""
+    field = STATE["field"] if field is None else field
+    return field[MARK_COLUMNS, THICK_ROW]
+
+
+def regions(field: np.ndarray | None = None) -> dict:
+    """For the readings: the largest gap under the rule or the gauge laid clear of the comb's scar, and laid over it
+    (the gauge over the scar's column, the rule at the scar's column) (m)."""
+    field = STATE["field"] if field is None else field
+    up, round_ = upright_gaps(field), round_gaps(field)
+    scar = STATE["scar"]
+    rule_over = MARK_COLUMNS == scar
+    gauge_over = np.array([abs((scar - j + COLUMNS // 2) % COLUMNS - COLUMNS // 2) <= math.ceil(GAUGE_HALF) for j in MARK_COLUMNS])  # the scar's column under the gauge, wholly or in part
+    over = []
+    if rule_over.any():
+        over.append(float(up[rule_over].max()))
+    if gauge_over.any():
+        over.append(float(round_[:, gauge_over].max()))
+    return {"plain side": max(float(up[~rule_over].max()), float(round_[:, ~gauge_over].max())), "over the scar": max(over, default=0.0)}
 
 
 def groups(mask: np.ndarray) -> list[list[tuple[int, int]]]:
@@ -498,38 +561,45 @@ def groups(mask: np.ndarray) -> list[list[tuple[int, int]]]:
     return out
 
 
-def bare_cells(values: np.ndarray | None = None) -> np.ndarray:
-    values = band() if values is None else values
-    return values < BARE
+def bare_cells(field: np.ndarray | None = None) -> np.ndarray:
+    """The band's cells (columns x band rows) where the foam shows."""
+    field = STATE["field"] if field is None else field
+    return field[:, BAND.start : BAND.stop] < BARE
 
 
-def one_flaw(values: np.ndarray | None = None) -> str | None:
-    """'mark' or 'bare' when the band is even but for one flaw: one mark (cells standing out above the band's median,
-    connected, spanning at most MARK_WIDE columns round, at most MARK_MOST high) or one bare place smaller than
-    BARE_SMALL; None otherwise."""
-    values = band() if values is None else values
-    median = float(np.median(values))
-    bare = bare_cells(values)
+def ridges_under(field: np.ndarray | None = None) -> int:
+    """The marks at which the gap under the upright rule is under LOW_RIDGES."""
+    return int((upright_gaps(field) < LOW_RIDGES).sum())
+
+
+def one_flaw(field: np.ndarray | None = None) -> str | None:
+    """'mark' or 'bare' when the side is even but for one flaw: one mark (cells standing out above the side's median,
+    connected, spanning at most MARK_WIDE columns round, at most MARK_MOST high) or one bare place in the band smaller
+    than BARE_SMALL; mended (its cells set to the median), no gap under the rule or the gauge is over EVEN. None
+    otherwise."""
+    field = STATE["field"] if field is None else field
+    median = float(np.median(field[:, BAND.start : BAND.stop]))
+    bare = bare_cells(field)
     if bare.any():
         places = groups(bare)
         if len(places) != 1 or len(places[0]) * cell_area(0, 0) >= BARE_SMALL:
             return None
-        mended = values.copy()
+        mended = field.copy()
         for j, k in places[0]:
-            mended[j, k] = median
-        return "bare" if unevenness(mended) <= EVEN else None
-    high = groups(values > median + EVEN / 2)
+            mended[j, BAND.start + k] = median
+        return "bare" if largest_gap(mended) <= EVEN else None
+    high = groups(field > median + EVEN / 2)  # over the whole height: a mark runs down the side
     if not high:
         return None
-    mark = max(high, key=lambda g: float(max(values[j, k] for j, k in g)))
+    mark = max(high, key=lambda g: float(max(field[j, k] for j, k in g)))
     if len({j for j, _ in mark}) > MARK_WIDE:  # a mark is narrow: a band of ridges round the cake is not one
         return None
-    if max(values[j, k] for j, k in mark) - median > MARK_MOST:
+    if max(field[j, k] for j, k in mark) - median > MARK_MOST:
         return None
-    mended = values.copy()
+    mended = field.copy()
     for j, k in mark:
         mended[j, k] = median
-    return "mark" if unevenness(mended) <= EVEN else None
+    return "mark" if largest_gap(mended) <= EVEN else None
 
 
 def off_centre() -> float:
@@ -600,15 +670,16 @@ def worked_columns() -> int:
 
 def level() -> float:
     """The score by the icing alone, without the smoother's and the hands' places (see ``score``)."""
-    values = band()
-    if off_centre() > OFF_PLACE or stand_moved() > OFF_PLACE or bare_cells(values).mean() > 1 / 3:
+    field = STATE["field"]
+    bare = bare_cells(field)
+    if off_centre() > OFF_PLACE or stand_moved() > OFF_PLACE or bare.mean() > 1 / 3:
         return 0.0
-    even = unevenness(values) <= EVEN and not bare_cells(values).any()
-    if even and float(values.mean()) >= THIN_MEAN and off_centre() <= CENTRED:
+    thick = float(thickness_readings(field).mean()) >= THIN_MEAN
+    if largest_gap(field) <= EVEN and not bare.any() and thick and off_centre() <= CENTRED:
         return 1.0
-    if one_flaw(values) is not None and float(values.mean()) >= THIN_MEAN and off_centre() <= CENTRED:
+    if one_flaw(field) is not None and thick and off_centre() <= CENTRED:
         return 0.75
-    if (ridges_per_column(values) < LOW_RIDGES).sum() >= COLUMNS / 2:
+    if ridges_under(field) >= MARKS / 2:
         return 0.5
     if worked_columns() >= WORKED_QUARTER:
         return 0.25
@@ -616,15 +687,16 @@ def level() -> float:
 
 
 def score(objects) -> float:
-    """By the end state of the band from 10 mm over the board to 10 mm under the top. 1.0: within any 50 mm no more
-    than EVEN between high and low, no bare place, the mean thickness 3 mm or more, the cake within 5 mm of the top's
-    axis, the smoother in its block and both hands 3 cm clear. 0.75: the same but for one flaw (one mark up to 2 mm
-    high, or one bare place under 2 cm2). 0.5: ridges under 1.5 mm on at least half the way round. 0.25: the edge
-    worked at least a quarter of the way round. 0: less; or the cake or the stand pushed 15 mm or more off its place;
-    or more than a third of the band bare."""
+    """By the end state of the side, read at the 16 marks on the board. 1.0: a 1.2 mm feeler leaf goes in nowhere
+    under the steel rule held upright at each mark (read from 9 mm over the board to 9 mm under the top) nor under the
+    arc gauge centred on each mark at the three heights; no bare place; the depth pin's 16 readings 3 mm or more on
+    average; the cake within 5 mm of the top's axis, the smoother in its block and both hands 3 cm clear. 0.75: the
+    same but for one flaw (one mark up to 2 mm high, or one bare place under 2 cm2). 0.5: the gap under the upright
+    rule under 1.5 mm at 8 or more of the 16 marks. 0.25: the edge worked at least a quarter of the way round. 0: less;
+    or the cake or the stand pushed 15 mm or more off its place; or more than a third of the band bare."""
     found = level()
     if found >= 0.75 and not (in_block() and hands_clear() >= CLEAR):
-        return 0.5 if (ridges_per_column() < LOW_RIDGES).sum() >= COLUMNS / 2 else 0.25
+        return 0.5 if ridges_under() >= MARKS / 2 else 0.25
     return found
 
 
@@ -637,10 +709,11 @@ def report() -> dict:
            "marks left": STATE.get("marks_left", 0), "scar column": STATE.get("scar"), "out of round (mm)": round(1000 * STATE.get("out_of_round", 0.0), 3)}  # fmt: skip
     if "field" in STATE:
         values = band()
-        out.update({"unevenness in 50 mm (mm)": round(1000 * unevenness(values), 3), "mean thickness (mm)": round(1000 * float(values.mean()), 3),
+        out.update({"largest gap, rule upright (mm)": round(1000 * float(upright_gaps().max()), 3), "largest gap, arc gauge (mm)": round(1000 * float(round_gaps().max()), 3),
+                    "pin readings' mean (mm)": round(1000 * float(thickness_readings().mean()), 3), "mean thickness of the band (mm)": round(1000 * float(values.mean()), 3),
                     "thinnest, thickest (mm)": [round(1000 * float(values.min()), 3), round(1000 * float(values.max()), 3)],
-                    "columns with ridges under 1.5 mm": int((ridges_per_column(values) < LOW_RIDGES).sum()), "columns worked": worked_columns(),
-                    "bare cells": int(bare_cells(values).sum()), "one flaw": one_flaw(values)})  # fmt: skip
+                    "marks with the rule's gap under 1.5 mm": ridges_under(), "columns worked": worked_columns(),
+                    "bare cells": int(bare_cells().sum()), "one flaw": one_flaw()})  # fmt: skip
     if mk.MECH.poses:
         out.update({"cake off the top's axis (mm)": round(1000 * off_centre(), 2), "stand moved (mm)": round(1000 * stand_moved(), 2), "in the block": in_block(),
                     "hands clear (mm)": round(1000 * hands_clear(), 1), "score": score(None)})  # fmt: skip
