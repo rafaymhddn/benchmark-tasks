@@ -257,7 +257,7 @@ def open_task(task: str | Path, hz: float = 20.0):
 
 
 def run(embodiment, moves: dict[str, list[Move]], out: str | Path, *, seed: int | None = 0, director: Any = None, tail_s: float = 1.0,
-        limit_s: float = 120.0, sheet_frames: int = 12, crop: dict | None = None, extra: Any = None) -> dict:  # fmt: skip
+        limit_s: float = 120.0, sheet_frames: int = 12, crop: dict | None = None, extra: Any = None, record: bool = True) -> dict:  # fmt: skip
     """Reset ``embodiment`` (from :func:`open_task`) with ``seed``, play ``moves`` (side -> list of Move; a missing
     side holds the ready pose) and write the results into ``out``. It ends ``tail_s`` after the last move, at
     ``limit_s``, or when the task ends the episode.
@@ -266,7 +266,8 @@ def run(embodiment, moves: dict[str, list[Move]], out: str | Path, *, seed: int 
     (name -> RGB array; None in a dry run) and may append moves to ``arms[side].moves``: that is how a demo acts on
     what it sees. A decision that depends on a hidden state is taken from those pictures, not from the simulator.
     ``crop``: camera -> (x0, y0, x1, y1) in 640x360 pixels for that camera's contact sheet. ``extra()`` is called
-    every step and its result stored in the step's row. Several runs may follow each other on one embodiment."""
+    every step and its result stored in the step's row. Several runs may follow each other on one embodiment.
+    ``record=False``: no videos (a check, not a recording)."""
     import cv2
     from inspect_robots import Scene
     from inspect_robots.types import Action
@@ -290,53 +291,55 @@ def run(embodiment, moves: dict[str, list[Move]], out: str | Path, *, seed: int 
     cv2.imwrite(str(out / "setup.png"), cv2.cvtColor(observation.images["top_cam"], cv2.COLOR_RGB2BGR))
     import imageio  # its ffmpeg plugin writes H.264; this OpenCV build has no MP4 encoder (its writer fails without a word)
 
-    writers = {cam: imageio.get_writer(str(out / f"{cam}.mp4"), fps=hz, codec="libx264", quality=7, macro_block_size=1) for cam in CAMERAS}
+    writers = {cam: imageio.get_writer(str(out / f"{cam}.mp4"), fps=hz, codec="libx264", quality=7, macro_block_size=1) for cam in CAMERAS} if record else {}
     kept: dict[str, list] = {cam: [] for cam in CAMERAS}
     kept_labels: list[str] = []
     rows, result, spent, i = [], None, [], 0
-    while True:
-        t = i / hz
-        if director is not None:
-            director(t, arms, observation.images)
-        if t >= min(limit_s, max(arm.seconds for arm in arms.values()) + tail_s):
-            break
-        left, left_label = arms["left"].action(t)
-        right, right_label = arms["right"].action(t)
-        start = time.perf_counter()
-        result = embodiment.step(Action(data=pack(left, right)))
-        spent.append((time.perf_counter() - start) * 1000.0)
-        observation = result.observation
-        for cam in CAMERAS:
-            writers[cam].append_data(observation.images[cam])
-        seen = np.asarray(next(iter(observation.state.values())), dtype=float).reshape(-1)  # left 7 then right 7, as sent
-        row = {
-            "t": round((i + 1) / hz, 3),
-            "left": left_label,
-            "right": right_label,
-            # What each arm's joint springs press with at the point it pushes with (the grasp point otherwise): an estimate, good at rest only.
-            "force": {side: [round(float(f), 2) for f in spring_force(sent, seen[7 * k : 7 * k + 6], bases[side], arms[side].state(t)[5])] for k, (side, sent) in enumerate((("left", left), ("right", right)))},
-            "travel": {k: round(float(v), 5) for k, v in mechkit.MECH.travel.items()},
-            "info": {k: (bool(v) if isinstance(v, (bool, np.bool_)) else float(v)) for k, v in result.info.items()},
-            "grip": {side: [round(float(c), 4) for c in mechkit.MECH.grippers[side][0]] + [round(mechkit.MECH.grippers[side][1], 3)] for side in SIDES if side in mechkit.MECH.grippers},
-        }  # fmt: skip
-        if extra is not None:
-            row["extra"] = json.loads(json.dumps(extra(), default=str))
-        rows.append(row)
-        if i % max(1, int(round(hz / 2))) == 0:  # two a second, thinned to the sheet's size at the end
-            for cam in CAMERAS:
-                frame = observation.images[cam]
-                if crop and cam in crop:
-                    x0, y0, x1, y1 = crop[cam]
-                    frame = frame[y0:y1, x0:x1]
-                kept[cam].append(np.ascontiguousarray(frame))
-            kept_labels.append(f"{row['t']:.1f}s L:{left_label} R:{right_label}"[:44])
-        if i % int(hz) == int(hz) - 1:
-            print(f"t {row['t']:6.2f}  L {left_label:<16} R {right_label:<16} travel {row['travel']}  info {row['info']}", flush=True)
-        i += 1
-        if result.terminated:
-            break
-    for writer in writers.values():
-        writer.close()
+    try:
+        while True:
+            t = i / hz
+            if director is not None:
+                director(t, arms, observation.images)
+            if t >= min(limit_s, max(arm.seconds for arm in arms.values()) + tail_s):
+                break
+            left, left_label = arms["left"].action(t)
+            right, right_label = arms["right"].action(t)
+            start = time.perf_counter()
+            result = embodiment.step(Action(data=pack(left, right)))
+            spent.append((time.perf_counter() - start) * 1000.0)
+            observation = result.observation
+            for cam, writer in writers.items():
+                writer.append_data(observation.images[cam])
+            seen = np.asarray(next(iter(observation.state.values())), dtype=float).reshape(-1)  # left 7 then right 7, as sent
+            row = {
+                "t": round((i + 1) / hz, 3),
+                "left": left_label,
+                "right": right_label,
+                # What each arm's joint springs press with at the point it pushes with (the grasp point otherwise): an estimate, good at rest only.
+                "force": {side: [round(float(f), 2) for f in spring_force(sent, seen[7 * k : 7 * k + 6], bases[side], arms[side].state(t)[5])] for k, (side, sent) in enumerate((("left", left), ("right", right)))},
+                "travel": {k: round(float(v), 5) for k, v in mechkit.MECH.travel.items()},
+                "info": {k: (bool(v) if isinstance(v, (bool, np.bool_)) else float(v)) for k, v in result.info.items()},
+                "grip": {side: [round(float(c), 4) for c in mechkit.MECH.grippers[side][0]] + [round(mechkit.MECH.grippers[side][1], 3)] for side in SIDES if side in mechkit.MECH.grippers},
+            }  # fmt: skip
+            if extra is not None:
+                row["extra"] = json.loads(json.dumps(extra(), default=str))
+            rows.append(row)
+            if i % max(1, int(round(hz / 2))) == 0:  # two a second, thinned to the sheet's size at the end
+                for cam in CAMERAS:
+                    frame = observation.images[cam]
+                    if crop and cam in crop:
+                        x0, y0, x1, y1 = crop[cam]
+                        frame = frame[y0:y1, x0:x1]
+                    kept[cam].append(np.ascontiguousarray(frame))
+                kept_labels.append(f"{row['t']:.1f}s L:{left_label} R:{right_label}"[:44])
+            if i % int(hz) == int(hz) - 1:
+                print(f"t {row['t']:6.2f}  L {left_label:<16} R {right_label:<16} travel {row['travel']}  info {row['info']}", flush=True)
+            i += 1
+            if result.terminated:
+                break
+    finally:  # closed even when a step raises: what was recorded up to it can be played
+        for writer in writers.values():
+            writer.close()
     picks = sorted({int(round(k * (len(kept_labels) - 1) / max(1, sheet_frames - 1))) for k in range(sheet_frames)}) if kept_labels else []
     for cam in CAMERAS:
         if picks:

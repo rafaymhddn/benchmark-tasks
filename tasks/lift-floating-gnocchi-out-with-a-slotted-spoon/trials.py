@@ -3,7 +3,7 @@
 float up when they are done and stay afloat, how far do pan and hob move by themselves, and can the floating
 pieces and the hob's lamp be seen by the top camera at the size a policy gets.
 
-    scripts/rta simpy <id> mech/tasks/gnocchi_lift/trials.py /workspace/robocurve/outputs/<id> [rest,cue,lamp,hide,float]
+    scripts/rta simpy <id> mech/tasks/gnocchi_lift/trials.py /workspace/robocurve/outputs/<id> [rest,cue,lamp,hide,float] [window=<from>,<to>[,<late>]]
 
 ``rest``   2 s: how far each body has moved from where the reset put it; the three cameras' pictures.
 ``lamp``   the hob's lamp in the top camera's picture as the heat is switched off and on.
@@ -13,8 +13,10 @@ pieces and the hob's lamp be seen by the top camera at the size a policy gets.
 ``scoop``  four pieces made to float; the right arm takes the spoon, lifts each from where the simulator has it,
            carries it to the plate and tips it out (a mechanics trial: it reads the simulator, not a picture).
 ``dig``    can the spoon get a piece off the pan's floor? One piece, three tilts of the bowl.
-``float``  60 s of the trial as the seed draws it: when each piece is done and when it reached the surface, how it
-           floats at the end, the most the pan moved and tilted.
+``float``  the trial as the seed draws it, until 10 s after the last piece is due at the surface: when each piece
+           is done and when it reached the surface (inside the task's window? as long on the way up as the task
+           file's RISE_TRAVEL_S says?), how it floats at the end, the most the pan moved and tilted.
+``window=<from>,<to>[,<late>]``: other timing numbers than the task file's, for a what-if (task.set_timing).
 
 Every trial writes <out dir>/<trial>.json; ``rest`` and ``cue`` also their pictures.
 """
@@ -31,7 +33,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))  # demo_kit
 
-RUN_S = 60.0
+FLOAT_TAIL_S = 10.0  # the float trial goes on this long after the last piece is due at the surface
 NEVER = 1e9
 
 
@@ -517,7 +519,8 @@ def float_up(embodiment, out: Path) -> dict:
     came_up: dict[int, np.ndarray] = {}  # where each piece was when it reached the surface
     wandered = np.zeros(m.PIECES)  # the farthest it has been from there since
     least_inside = np.full(m.PIECES, np.inf)  # the least it has been inside the region's straight edge since
-    for _ in range(int(round(RUN_S * hz))):
+    run_s = m.FLOAT_TO + FLOAT_TAIL_S
+    for _ in range(int(round(run_s * hz))):
         step = embodiment.step(_hold())
         pan_p, pan_r = mk.pose("pan")
         rows = afloat(m)
@@ -533,11 +536,20 @@ def float_up(embodiment, out: Path) -> dict:
                            ("a piece from the pan's middle (mm)", max(r["from the pan's middle (mm)"] for r in rows)), ("a piece's top over the surface (mm)", max(r["top over the surface (mm)"] for r in rows))):  # fmt: skip
             most[key] = round(max(most[key], value), 2)
     done, floated = m.STATE["done_at"], m.STATE["floated"]
+    rises = [float(f - d) for d, f in zip(done, floated) if not np.isnan(f)]
+    step_s = 1.0 / hz  # a time is read once per control step
     result = {
+        "ran (s)": run_s,
+        "window (s): the pieces reach the surface from, to; a floating piece may stay": [m.FLOAT_FROM, m.FLOAT_TO, m.LATE_S],
         "done at (s)": [round(float(v), 2) for v in done],
+        "reached the surface at (s)": [None if np.isnan(f) else round(float(f), 2) for f in floated],
         "reached the surface after (s)": [None if np.isnan(f) else round(float(f - d), 2) for d, f in zip(done, floated)],
+        "all twelve came up": len(rises) == m.PIECES,
+        "came up inside the window (to a control step)": bool(len(rises) == m.PIECES and np.all((floated >= m.FLOAT_FROM - step_s) & (floated <= m.FLOAT_TO + step_s))),
+        "on the way up (s): least, most, the task file's RISE_TRAVEL_S": [round(min(rises), 2), round(max(rises), 2), m.RISE_TRAVEL_S] if rises else None,
+        "RISE_TRAVEL_S holds (within a control step)": bool(rises and max(abs(r - m.RISE_TRAVEL_S) for r in rises) <= step_s),
         "at the end": afloat(m),
-        "the most in 60 s": most,
+        "the most in the run": most,
         "wandered from where it came up (mm), most, by piece": [round(1000 * float(v), 1) for v in wandered],
         "left its start place on the way up (mm), by piece": [None if k not in came_up else round(1000 * float(np.linalg.norm(came_up[k] - m.STATE["place"][k])), 1) for k in range(m.PIECES)],
         "least distance inside the region's edge after coming up (mm), by piece": [None if not np.isfinite(v) else round(1000 * float(v), 1) for v in least_inside],
@@ -552,13 +564,18 @@ def float_up(embodiment, out: Path) -> dict:
 def main() -> int:
     import demo_kit as kit
 
-    out = Path(sys.argv[1])
+    args = [a for a in sys.argv[1:] if not a.startswith("window=")]
+    windows = [a for a in sys.argv[1:] if a.startswith("window=")]
+    out = Path(args[0])
     known = {"rest": rest, "cue": cue, "lamp": lamp, "lamp_moves": lamp_moves, "hide": hide, "scoop": scoop, "scoop_clear": scoop_clear, "dig": dig, "float": float_up}
-    trials = sys.argv[2].split(",") if len(sys.argv) > 2 else list(known)
+    trials = args[1].split(",") if len(args) > 1 else list(known)
     if not trials or any(name not in known for name in trials):
         raise SystemExit(f"trials here: {sorted(known)}; got {trials}")
     out.mkdir(parents=True, exist_ok=True)
     embodiment = kit.open_task(HERE / "task.py")
+    if windows:  # a what-if: other timing numbers than the task file's
+        m = embodiment.task.module
+        print(f"TIMING what-if {windows[-1]}: {m.set_timing(*(float(v) for v in windows[-1].split('=', 1)[1].split(',')))}", flush=True)
     for name in trials:
         result = known[name](embodiment, out)
         (out / f"{name}.json").write_text(json.dumps(result, indent=1, default=str))

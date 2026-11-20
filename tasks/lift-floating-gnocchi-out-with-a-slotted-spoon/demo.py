@@ -2,7 +2,7 @@
 """Reference runs of the gnocchi task: the full score, and the runs that show what each level and each zero rule
 costs.
 
-    scripts/rta demo <id> mech/tasks/gnocchi_lift [run,run,...] [--dry]
+    scripts/rta demo <id> mech/tasks/gnocchi_lift [run,run,...] [--dry] [window=<from>,<to>[,<late>]]
 
 The right arm takes the slotted spoon off its rest and waits over the pan. Whenever pieces float it brings the
 bowl down behind them, nose down, slides it under them, lifts, carries them level to the plate, tips them out nose
@@ -22,8 +22,9 @@ the scene before it is taken (skim.py).
 Runs: ``full`` everything, score 1.0. ``nine``, ``six``, ``three``: the arm stops taking pieces once that many
 lie on the plate and tidies up (0.75, 0.5, 0.25). ``heat_on``: everything, but the key is not touched (0.5).
 ``spoon_kept``: everything, but the spoon stays in the gripper (0.5). ``late``: once all but three pieces have
-left the water the arm waits until every piece still in it has floated for more than the 60 s allowed, then
-takes them: they do not count (0.75). ``handled``: before the spoon starts, the open left hand goes down over two
+left the water the arm waits until every piece still in it has floated for longer than a floating piece may
+(the task's LATE_S), then takes them: they do not count (0.75). Until then it takes no spoonful that would leave
+fewer than three in the water. ``handled``: before the spoon starts, the open left hand goes down over two
 floating pieces, one after the other, as if to pick them out; they are served with the rest and do not count
 (0.75). ``shove``: everything, and before the key the left hand pushes the pan back on the hob, more than 3 cm
 (0). ``raw``: before it takes the spoon the right hand, empty, reaches into the water, closes on what lies on
@@ -34,7 +35,10 @@ bowl really is against where the hand's pose puts it. ``shove_only``, ``raw_only
 pan's wall and goes 7 cm up, to see whether a hand can tip the pan (it cannot: the task file says why tipping
 is not scored). ``--dry``: no simulator; the fixed parts
 of the plan (taking the spoon, a scoop at each start place of seed 0, serving at every landing place, laying the
-spoon back, the key, the hand into the pan) through the IK and the collision check.
+spoon back, the key, the hand into the pan) through the IK and the collision check, and the full run's times by
+arithmetic (``forecast``). ``window=<from>,<to>[,<late>]``: a what-if with other timing numbers than the task
+file's (when the pieces reach the surface, how long a floating piece may stay); the run limit follows from them
+(task.set_timing), and every run's ``trips.json`` names the numbers it ran with.
 """
 
 from __future__ import annotations
@@ -57,6 +61,9 @@ RUNS = {"full": None, "nine": 9, "six": 6, "three": 3, "heat_on": None, "spoon_k
 # under a gnocco: on one layout the scoops came out full, on the next empty (runs l7q and l7z).
 SCOOP_S = (1.2, 1.0, 1.0, 0.2, 0.8, 0.5)
 SERVE_S = (1.3, 0.7, 0.4, 0.5)  # to the plate, tip, let slide, level
+TRIP_S = sum(SCOOP_S) + sum(SERVE_S)  # 7.6 s from one scoop's start to the next
+OUT_S = 4.85  # s into a trip at which its pieces have left the water (4.8 to 4.85 s: run l7ref full)
+SCORED_S = 4.5  # s from the start of the tidying until the spoon lies and the heat is off (run l7ref full: 85.85 to 90.35 s)
 HEADINGS = (225, 210, 240, 195, 255, 180, 270)  # handle headings tried, the easiest for the arm first
 PITCHES = (10, 15)  # nose down, degrees
 AHEAD = 0.03  # m: the piece the scoop is aimed at lies this far nose-side of the bowl's middle
@@ -88,6 +95,28 @@ SHOVE = 0.20  # m the ``shove`` run's hand travels, the last 15 cm of it against
 GRAB_AT, GRAB_YAW = (0.02, -0.02), math.radians(30)
 
 
+def forecast(surface, ready_s: float, per_trip: int = 1, hold_s: float = 1.0) -> dict:
+    """The full run by arithmetic, with no simulator: the times at which the pieces reach the surface, in; the
+    trips, the longest a piece floats before it leaves the water, and the run's end, out. The arm is over the pan
+    at ``ready_s``; whenever it is free and pieces float it makes a trip of TRIP_S with up to ``per_trip`` of them,
+    those that have floated longest first; they leave the water OUT_S into the trip. When the pan is empty the
+    tidying takes SCORED_S and the score has to hold for ``hold_s``. One piece a trip is the slowest the script can
+    be: in the recordings a trip brought out one to three (1.33 on average in run l7ref full)."""
+    waiting = sorted(float(v) for v in surface)
+    if not waiting:
+        raise ValueError("no piece to come up")
+    t, trips, waits = float(ready_s), [], []
+    while waiting:
+        t = max(t, waiting[0])
+        taken = [up for up in waiting if up <= t][:per_trip]
+        waits.extend(t + OUT_S - up for up in taken)
+        trips.append(t)
+        waiting = waiting[len(taken):]
+        t += TRIP_S
+    return {"trips": len(trips), "first trip at (s)": round(trips[0], 2), "pan empty at (s)": round(t, 2), "longest a piece floats (s)": round(max(waits), 2),
+            "ends at (s)": round(t + SCORED_S + hold_s, 2)}  # fmt: skip
+
+
 def floating(m, mk) -> list[tuple[int, np.ndarray, float]]:
     """(piece, where its middle is (world x, y), since when it has floated) for every piece afloat in the pan."""
     found = []
@@ -100,9 +129,10 @@ def floating(m, mk) -> list[tuple[int, np.ndarray, float]]:
     return found
 
 
-def choices(layout, afloat: list) -> list[dict]:
+def choices(layout, afloat: list, most: int | None = None) -> list[dict]:
     """Every scoop worth trying, best first: aimed at each floating piece and between each two that float within
-    PAIR of each other, for every heading and tilt at which the spoon fits the pan."""
+    PAIR of each other, for every heading and tilt at which the spoon fits the pan. ``most``: no scoop that has
+    more pieces than this over the bowl."""
     import skim
 
     places = [at for _, at, _ in afloat]
@@ -115,7 +145,7 @@ def choices(layout, afloat: list) -> list[dict]:
                 if min(layout.spoon_gap(poses[k]) for k in ("in", "under")) < 0.001 or min(layout.spoon_gap(poses[k]) for k in ("over", "out", "level")) < skim.CLEAR:
                     continue
                 taken = layout.over_bowl(poses["under"], places)
-                if not taken:
+                if not taken or (most is not None and len(taken) > most):
                     continue
                 pushed = [k for k in layout.under_bowl(poses["in"], places) if k not in taken]
                 found.append({"aim": aim, "heading": heading, "pitch": pitch, "takes": [afloat[k][0] for k in taken], "comes down on": [afloat[k][0] for k in pushed],
@@ -123,9 +153,10 @@ def choices(layout, afloat: list) -> list[dict]:
     return sorted(found, key=lambda c: (-len(c["takes"]), c["floating since"], len(c["comes down on"]), HEADINGS.index(c["heading"]), c["pitch"]))
 
 
-def plan_trip(layout, afloat: list, arm, t: float, tries: int = 10):
-    """(moves of the scoop, what was chosen) for the best choice the arm can do from where it is, or (None, why)."""
-    ranked = choices(layout, afloat)
+def plan_trip(layout, afloat: list, arm, t: float, tries: int = 10, most: int | None = None):
+    """(moves of the scoop, what was chosen) for the best choice the arm can do from where it is, or (None, why).
+    ``most``: the most pieces the scoop may have over the bowl."""
+    ranked = choices(layout, afloat, most)
     refused = []
     for chosen in ranked[:tries]:
         moves = layout.scoop(chosen["aim"], math.radians(chosen["heading"]), math.radians(chosen["pitch"]), AHEAD, seconds=SCOOP_S)
@@ -145,7 +176,8 @@ def main() -> int:
     from yam_arena import station
     from yam_arena.constants import FINGER_OPEN
 
-    args = [a for a in sys.argv[1:] if a != "--dry"]
+    args = [a for a in sys.argv[1:] if a != "--dry" and not a.startswith("window=")]
+    windows = [a for a in sys.argv[1:] if a.startswith("window=")]
     dry = "--dry" in sys.argv
     out = Path(args[0])
     runs = args[1].split(",") if len(args) > 1 else ["full"]
@@ -154,6 +186,11 @@ def main() -> int:
     embodiment = kit.open_task(HERE / "task.py")
     m = embodiment.task.module
     mk = m.mk
+    if windows:  # a what-if: other timing numbers than the task file's
+        m.set_timing(*(float(v) for v in windows[-1].split("=", 1)[1].split(",")))
+    timing = {"the pieces reach the surface (s after the start): from, to": [m.FLOAT_FROM, m.FLOAT_TO], "a floating piece may stay (s)": m.LATE_S,
+              "run limit (steps)": m.RUN_LIMIT_STEPS, "the task file's own numbers": not windows}  # fmt: skip
+    print(f"TIMING {json.dumps(timing)}", flush=True)
     layout = skim.Layout(m)
     up = np.array([0.0, 0.0, 1.0])
 
@@ -263,6 +300,12 @@ def main() -> int:
         print(f"DRY the empty right hand into the pan and to the plate (hand open, its corners against the open pan): {show(got)}", flush=True)
         got = layout.check([*grab_raw(), *take], holding_from=sum(mv.seconds for mv in grab_raw()) + 6.2, hand_in_pan=True)
         print(f"DRY the same, then take the spoon and go over the pan: {show(got)}", flush=True)
+        surface = m.STATE["done_at"] + m.RISE_TRAVEL_S  # seed 0, as laid out above
+        ready = sum(mv.seconds for mv in take)
+        limit = m.RUN_LIMIT_STEPS / m.CONTROL_HZ
+        print(f"DRY seed 0: the pieces reach the surface at {sorted(round(float(v), 1) for v in surface)} s; the arm is over the pan at {ready:.1f} s; run limit {limit:.0f} s", flush=True)
+        for per_trip in (1, 2):
+            print(f"DRY the full run by arithmetic, {per_trip} to a trip: {forecast(surface, ready, per_trip)} (a floating piece may stay {m.LATE_S:.0f} s; the script stops taking pieces at {limit - TIDY_S:.0f} s)", flush=True)
         return 0
 
     def hand_over(at: np.ndarray, turned: bool = False) -> list:
@@ -339,7 +382,9 @@ def main() -> int:
                         state["phase"] = "tidy"
                         state["why"] = "enough lie on the plate" if enough else "the pan is empty" if in_pan == 0 else "time is up" if time_up else f"no way to what is left in the pan for {GIVE_UP:.0f} s"
                     elif afloat:
-                        moves, chosen = plan_trip(layout, afloat, right, t)
+                        # the late run keeps LATE_LEFT pieces in the water until their time is up: no spoonful that would take one of them
+                        most = m.PIECES - LATE_LEFT - out_of_water() if run == "late" and "went on at (s)" not in state else None
+                        moves, chosen = plan_trip(layout, afloat, right, t, most=most)
                         if moves is None:
                             for k, _, _ in afloat:
                                 state["skipped"][k] = t + 2.0  # look at these again in 2 s: they wander
@@ -407,7 +452,7 @@ def main() -> int:
                 "pieces the left hand went down over": state.get("handled"), "in the pan at the end": int(m.STATE["in_water"].sum()), "late run: waited from (s)": state.get("waited from (s)"), "went on at (s)": state.get("went on at (s)"),
                 "nearest a gripper's grasp point came to a piece's middle (mm)": round(1000 * min(float(np.linalg.norm(np.array(row["grip"][side][:3]) - np.array(piece))) for row in rows for side in row["grip"] for piece in row["extra"]["pieces"]), 1),
             }  # fmt: skip
-            (out / run / "trips.json").write_text(json.dumps({"score": scores[-1], "first reached": firsts, **readings, "each trip": state["trips"]}, indent=1, default=str))
+            (out / run / "trips.json").write_text(json.dumps({"score": scores[-1], "first reached": firsts, "timing": timing, **readings, "each trip": state["trips"]}, indent=1, default=str))
             print(f"DEMO {run}: score {scores[-1]:.2f} success {result['terminated'] and result['termination_reason'] == 'success'} after {result['seconds']:.1f} s ({result['steps']} steps of {m.RUN_LIMIT_STEPS}); "
                   f"first reached {firsts}; report { {k: v for k, v in report.items() if k not in ('done at (s)',)} }; worst IK {result['worst_ik']}", flush=True)  # fmt: skip
             print(f"READINGS {run}: {json.dumps(readings, default=str)}", flush=True)

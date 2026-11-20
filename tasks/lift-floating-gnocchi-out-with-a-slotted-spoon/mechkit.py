@@ -355,6 +355,12 @@ def _joint(kind: str, name: str, child: str, parent: str | None, anchor, axis, l
     length = float(np.linalg.norm(axis))
     if not length > 1e-9:
         raise ValueError(f"{name}: axis must not be zero")
+    if limits is None:  # a free hinge: it turns on through any number of turns
+        if kind != "hinge":
+            raise ValueError(f"{name}: only a hinge can be free (limits=None)")
+        if spring > 0 or friction > 0 or stop > 0:
+            raise ValueError(f"{name}: a free hinge takes damping only (a spring's or a friction hold's target would wrap at half a turn)")
+        limits = (-math.inf, math.inf)
     lower, upper = (float(v) for v in limits)
     if not lower <= upper:
         raise ValueError(f"{name}: limits must be (lower, upper) with lower <= upper, got {limits!r}")
@@ -362,7 +368,7 @@ def _joint(kind: str, name: str, child: str, parent: str | None, anchor, axis, l
         raise ValueError(f"{name}: spring, damping, friction and stop must not be negative")
     if friction > 0 and (spring > 0 or damping > 0):
         raise ValueError(f"{name}: a joint has either dry friction or a spring with damping (one drive per joint), not both")
-    if kind == "hinge" and not (-math.pi <= lower and upper <= math.pi):
+    if kind == "hinge" and not (lower == -math.inf and upper == math.inf) and not (-math.pi <= lower and upper <= math.pi):
         raise ValueError(f"{name}: a hinge's limits must lie within half a turn either way of the built pose (PhysX clamps them there)")
     _claim()
     if name in MECH.joints:
@@ -379,7 +385,8 @@ def _joint(kind: str, name: str, child: str, parent: str | None, anchor, axis, l
 def hinge(name: str, child: str, parent: str | None, anchor, axis, limits, *, spring: float = 0.0, rest: float = 0.0, damping: float = 0.0,
           friction: float = 0.0, stop: float = 0.0, stop_damping: float | None = None, give: float | None = None) -> Joint:  # fmt: skip
     """A revolute joint: ``child`` turns about the line through ``anchor`` along ``axis`` (world, as built) within
-    ``limits`` = (lower, upper) rad from the built pose. ``spring`` N m/rad pulls it to ``rest`` rad, or
+    ``limits`` = (lower, upper) rad from the built pose, or freely through any number of turns with ``limits=None``
+    (then with ``damping`` only: a nut on a thread; its travel counts the turns). ``spring`` N m/rad pulls it to ``rest`` rad, or
     ``friction`` N m holds it where it is left (it yields up to ``give`` rad before it is torn loose).
     ``stop`` N m/rad makes the end stops springs (see ``stop_load``)."""
     return _joint("hinge", name, child, parent, anchor, axis, limits, spring, rest, damping, friction, stop, stop_damping, give)
@@ -722,6 +729,39 @@ def _write_spring(j: Joint, rest: float | None, most: float | None) -> None:
         target.Set(float(to_usd(rest)))
     if most is not None:
         cap.Set(float(most))
+
+
+def set_limits(name: str, lower: float | None = None, upper: float | None = None) -> None:
+    """Move the end stops of hinge or slide ``name`` to ``lower`` and ``upper`` (rad or m from the built pose; None
+    leaves either as it is), from the next physics step on. A stop moved after a joint every control step makes a
+    one-way lock: it moves on freely and cannot go back past where it was (a ratchet's pawl, a bar clamp's lock plate).
+    The simulator keeps the stops through a reset, and a stop left where the last trial moved it would push the joint
+    there before the next trial's first step: put the stops back in an @on_reset function. Needs the simulator."""
+    j = MECH.joints[name]
+    if j.kind == "weld":
+        raise ValueError(f"{name}: a weld has no stops")
+    if j.lower == -math.inf and j.upper == math.inf:
+        raise ValueError(f"{name}: a free hinge has no stops to move (they would wrap at half a turn)")
+    if name not in MECH.joint_prims:
+        raise RuntimeError("set_limits() needs the simulator: call it from an @on_step or @on_reset function")
+    if lower is not None and upper is not None and not lower < upper:
+        raise ValueError(f"{name}: lower stop {lower} not under upper stop {upper} (PhysX refuses equal stops: give the joint a window)")
+    from isaaclab.sim.utils.stage import get_current_stage
+
+    prim = get_current_stage().GetPrimAtPath(MECH.joint_prims[j.name])
+    to_usd = math.degrees if j.kind == "hinge" else float  # USD: revolute limits are in degrees
+    writes = [(lower, "physics:lowerLimit"), (upper, "physics:upperLimit")]
+    if lower is not None and upper is not None:  # each write reaches the simulator alone: no state between the two may have its stops crossed
+        now_upper = prim.GetAttribute("physics:upperLimit").Get()
+        if now_upper is not None and to_usd(lower) >= float(now_upper):  # the window moved up past itself: the upper stop first (lower first, PhysX refused the stops every such step: e2f)
+            writes.reverse()
+    for value, attribute in writes:
+        if value is None:
+            continue
+        stop = prim.GetAttribute(attribute)
+        if not stop.IsValid():
+            raise RuntimeError(f"joint {j.name!r}: no {attribute} at {MECH.joint_prims[j.name]}")
+        stop.Set(float(to_usd(value)))
 
 
 def _friction_drive(j: Joint) -> tuple[float, float]:

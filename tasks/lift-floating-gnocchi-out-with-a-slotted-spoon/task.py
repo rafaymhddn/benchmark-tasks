@@ -1,7 +1,7 @@
 """A small serving of gnocchi is cooking in a pan of simmering water on the front zone of a built-in hob between the
-arms: twelve pieces, slid in off the board on the far side of the pan shortly before the trial starts, lie on the
-pan's floor under cloudy water. Each floats up when it is done, at a time of its own between 15 and 50 s after the
-start, in an order drawn from the seed. A
+arms: twelve pieces, tipped in together on the far side of the pan as the trial starts, lie on the
+pan's floor under cloudy water. Each floats up when it is done, at a time of its own inside a window after the
+start (FLOAT_FROM to FLOAT_TO below), in an order drawn from the seed. A
 plate stands in front of the right arm; beyond it and to its right a slotted spoon with a cranked handle lies with its
 bowl on a spoon rest and its handle towards the arms. The hob's lamp is red while the heat is on; its on/off key is on
 the front strip.
@@ -29,8 +29,56 @@ SCENE = "station"
 SCORE_OVER = "end"
 SUCCESS_HOLD_S = 1.0
 INSTRUCTION = "The gnocchi are cooking; each is done when it floats up. Lift them out onto the plate with the slotted spoon as they are done, then put the spoon down and switch the heat off."
-RUN_LIMIT_STEPS = 3000  # 150 s at 20 Hz
 TOP = TABLE_TOP[SCENE]
+
+# --- the timing: three numbers, and what follows from them ---
+# The trial starts when the batch has gone into the water. FLOAT_FROM, FLOAT_TO: the seconds after the start between
+# which the pieces reach the surface, each at a time of its own drawn from the seed. LATE_S: how long a piece may
+# stay in the water after it has reached the surface and still count.
+# None of the three is measured on this task's own bench. They are read from a published kitchen test of the named
+# gnocchi: all pieces of a batch afloat 1 minute and 20 to 30 seconds after they went into boiling water, and
+# pieces cooked for up to 180 s in all still judged cooked, the first stickiness from 150 s (README, "Float times:
+# source and status"). A bench that builds the task cooks three batches by the setup's procedure, reads each
+# piece's time off the overhead video and sets these numbers; everything below follows from them.
+FLOAT_FROM, FLOAT_TO = 80.0, 90.0
+LATE_S = 90.0
+# What follows from them.
+# A piece is done, and turns buoyant, RISE_TRAVEL_S before it is at the surface: from the pan's floor through 5.5 cm
+# of water it takes 2.35 to 2.39 s (run l7ru, trials.py float), so the times drawn for the surface are put that much
+# earlier as the times the pieces are done. It belongs to these pieces in this depth of water: trials.py float reads
+# it again and says so if it is off.
+RISE_TRAVEL_S = 2.37
+# The run limit: FLOAT_TO + LATE_S is the last moment at which a piece can still leave the water and count; CLEAR_S
+# more for the last spoonfuls, laying the spoon down and the key (the reference run that lets three pieces float too
+# long ended 20.2 s after the last piece's time was up: run l7ref late), rounded up to ten seconds.
+CLEAR_S = 40.0
+CONTROL_HZ = 20  # control steps a second, as in the run command
+
+
+def timing(float_from: float, float_to: float, late_s: float) -> dict:
+    """What follows from the three numbers: the window in which the pieces are done (s after the start) and the run
+    limit (s, control steps). They have to make a trial: the first piece cannot be at the surface before it has had
+    the time to rise, the window has a width, and a floating piece is allowed some time."""
+    if not RISE_TRAVEL_S <= float_from < float_to:
+        raise ValueError(f"the pieces reach the surface between {float_from} and {float_to} s: need {RISE_TRAVEL_S} <= from < to")
+    if not late_s > 0:
+        raise ValueError(f"a floating piece may stay {late_s} s in the water: need more than 0")
+    limit_s = 10.0 * math.ceil((float_to + late_s + CLEAR_S) / 10.0 - 1e-9)
+    return {"done_from": float_from - RISE_TRAVEL_S, "done_to": float_to - RISE_TRAVEL_S, "run_limit_s": limit_s, "run_limit_steps": int(round(limit_s * CONTROL_HZ))}
+
+
+def set_timing(float_from: float, float_to: float, late_s: float | None = None) -> dict:
+    """Other numbers than the task's, for a what-if run (demo.py window=...): the three constants and the run limit
+    are set together, before the trial is reset. Returns what follows from them."""
+    global FLOAT_FROM, FLOAT_TO, LATE_S, RUN_LIMIT_STEPS
+    late_s = LATE_S if late_s is None else late_s
+    derived = timing(float_from, float_to, late_s)
+    FLOAT_FROM, FLOAT_TO, LATE_S, RUN_LIMIT_STEPS = float(float_from), float(float_to), float(late_s), derived["run_limit_steps"]
+    return derived
+
+
+RUN_LIMIT_STEPS = timing(FLOAT_FROM, FLOAT_TO, LATE_S)["run_limit_steps"]  # 4,400: 220 s at 20 Hz
+
 GLASS, RED, STEEL, MILK, DOUGH, WHITE, NYLON, SLOT, GREY = (
     (0.08, 0.08, 0.09), (0.95, 0.10, 0.08), (0.74, 0.76, 0.79), (0.36, 0.34, 0.29), (0.99, 0.94, 0.74),
     (0.96, 0.96, 0.94), (0.10, 0.10, 0.11), (0.45, 0.45, 0.47), (0.55, 0.57, 0.60),
@@ -275,8 +323,6 @@ RAW, DONE = 0.78, 0.916  # share of the water's lift a piece gets: raw it sinks 
 RISE_S = 1.0  # a piece turns from raw to done over this long
 DRAG, SPIN_DRAG = 0.17, 1.1e-5  # N s/m and N m s/rad on a piece wholly under water
 DRIFT = 0.0003  # N: the simmer's push on a piece
-FLOAT_FROM, FLOAT_TO = 15.0, 50.0  # s after the start: when the pieces are done
-LATE_S = 60.0  # a piece is to leave the water no later than this after it floated (40 s left the reference run's slowest piece 7.9 s to spare: run l7q)
 
 # --- the rules ---
 UP_TO_SURFACE = 0.002  # m: a piece whose top is within this of the surface (or above) has floated
@@ -298,7 +344,7 @@ STATE: dict = {}
 def begin(seed: int | None = None) -> dict:
     """A new trial's state (no simulator needed)."""
     rng = np.random.default_rng(0 if seed is None else seed)
-    done_at = rng.uniform(FLOAT_FROM, FLOAT_TO, PIECES)
+    done_at = rng.uniform(FLOAT_FROM, FLOAT_TO, PIECES) - RISE_TRAVEL_S  # drawn: when each is at the surface
     place, yaw = lay(rng)
     STATE.clear()
     STATE.update(
