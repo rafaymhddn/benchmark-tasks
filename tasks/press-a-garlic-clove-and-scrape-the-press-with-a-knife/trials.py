@@ -14,9 +14,19 @@
            on the board with a torque pair on its two parts, then held where it stands by a weld). Then, free, the
            clove lengthways in the chamber; the handle let fall onto it by its own weight; then known closing torques
            on the handle, the same opening torque on the lower part (the press as a whole feels none): a quarter, a
-           half, three quarters of the yield's (1 s each), nine tenths (2 s), eleven tenths (3 s); then let go. Then the closed press lifted 6 cm over the saucer and held there, a knife moved under its sieve
-           (blade flat, its top face 0.5 mm under the sieve) once across the press at 2 cm/s, then its tip set on the
-           saucer's well. Amounts at each stage; pictures of the strands and the saucer.
+           half, three quarters of the yield's (1 s each), nine tenths (2 s), eleven tenths (3 s); then let go. Then the
+           closed press lifted 6 cm over the saucer and held there (a picture of the strands under it). Amounts at each
+           stage.
+
+``knife``  the run's last part with both arms as the script does it (demo.py), from a set start: the clove pressed
+           (its state set directly: 85 % of it through, of that 30 % on the saucer and 70 % hanging under the sieve
+           as strands), the press closed where it is pressed. The right hand lifts the press 6 cm while the left
+           fetches the knife; the left hand scrapes the sieve with the knife on its edge and wipes the blade's
+           underside on the saucer's rim twice; the right hand holds the press aside while the left lays the knife on
+           the board and goes home; then the right sets the press down beside it and goes home last. Each control step:
+           what the contact sensor reads between knife and press and between knife and saucer, the strands taken,
+           what the knife carries, what is on the saucer, how far the knife has turned in the left hand since the
+           scrape began, the press's and the saucer's tilt, the knife's edge against the sieve. The score at the end.
 
 Every trial writes <out dir>/<trial>.json.
 """
@@ -255,33 +265,114 @@ def press(embodiment, out: Path, seed: int = 0) -> dict:
     reading("lifted 6 cm over the saucer")
     observation = steps(embodiment, 0.1)[-1].observation
     _save(out, "lifted_top", np.asarray(observation.images["top_cam"]))
-    knife_rot = mk.axis_angle((0.0, 0.0, 1.0), -math.pi / 2)  # pointing -y, flat
-    sieve = m.press_point(m.PLUNGER_MID[0], 0.0, 0.0)
-    blade_mid = (m.BLADE_X[0] + m.BLADE_X[1]) / 2
-    hz = float(embodiment.info.control_hz)
-    carried = (0.0, 0.0, m.KNIFE_MASS * m.GRAVITY)  # the knife's weight carried, so that it keeps to where it is put
-    for k in range(int(round(3.0 * hz)) + 1):  # 6 cm in 3 s, at 2 cm/s
-        dx = -0.030 + 0.060 * k / (3.0 * hz)
-        at = sieve - knife_rot @ np.array([blade_mid, 0.0, m.BLADE_Z[1]]) + np.array([dx, 0.0, -0.0005])
-        mk.write_pose("knife", at, mk.matrix_to_quat(knife_rot), lin_vel=(0.020, 0.0, 0.0))
-        mk.push("knife", force=carried)
-        embodiment.step(_hold())
-    reading("knife once across under the sieve")
-    tilt = knife_rot @ mk.axis_angle((0.0, 1.0, 0.0), math.radians(15.0))
-    well = np.array([*mk.pose("saucer")[0][:2], m.TOP + m.WELL_W])
-    for k in range(int(round(1.0 * hz))):
-        mk.write_pose("knife", well - tilt @ np.array([m.BLADE_X[1] - 0.012, 0.0, m.BLADE_Z[0]]) + np.array([0.0, 0.0, 0.001]), mk.matrix_to_quat(tilt))
-        mk.push("knife", force=carried)
-        embodiment.step(_hold())
-    mk.push("knife")
-    reading("knife's tip on the saucer's well")
-    observation = steps(embodiment, 0.2)[-1].observation
-    _save(out, "saucer_top", np.asarray(observation.images["top_cam"]))
-    mk.cut("press_hold")
+    mk.cut("press_hold")  # (the knife's acts, by contact since the review: the trial ``knife``, with the arms)
     found = {"drive": drive, "stages": log, "springback when let go (mm)": round(1000 * springback, 3), "events": m.STATE["events"], "report": m.report(),
              "under 0.9 of the yield, from 0.5 s to 2 s: hinge moved (deg)": round(log[4]["hinge (deg)"] - log[5]["hinge (deg)"], 3),
              "went under 1.1 of the yield (deg)": round(math.degrees(before - pressed_to), 3)}  # fmt: skip
     print(f"PRESSED {json.dumps({k: v for k, v in found.items() if k != 'stages'}, default=str)}", flush=True)
+    return found
+
+
+def knife(embodiment, out: Path, seed: int = 0) -> dict:
+    import demo
+    import demo_kit as kit
+
+    m = embodiment.task.module
+    mk = m.mk
+    plan = demo.Plan(m, demo.seer(m))
+    state = {"set": False, "over": False}
+    shift = m.PRESSING_OVERHANG - (m.START_TIP_Y - m.BOARD_Y[1])
+    closed = math.radians(1.7)
+
+    def setup() -> None:
+        lower = (m.START_HINGE + np.array([0.0, shift, 0.0]), np.eye(3))
+        upper = mk.joint_pose(mk.MECH.joints["hinge"], closed, lower)
+        mk.write_pose("press", lower[0], (0.0, 0.0, 0.0, 1.0))
+        mk.write_pose("upper", upper[0], mk.matrix_to_quat(upper[1]))
+        mk.write_pose(m.STATE["clove"], m.PARKED[m.STATE["clove"]], (0.0, 0.0, 0.0, 1.0))
+        mass, touch = m.STATE["mass"], math.radians(33.6)
+        m.STATE.update(touched=True, top=m.face_height(touch), touch=touch, inside=mass, waste=0.0, lowest=m.face_height(0.0), rest=closed,
+                       crush=m.CRUSHED, contact=True, cap=0.0, through=0.85 * mass, hanging=[m.HANGING * 0.85 * mass / len(m.HOLES)] * len(m.HOLES))  # fmt: skip
+        under = lower[0] + np.array(m.uvw(m.PLUNGER_MID[0], 0.0, -0.002))  # what fell while pressing, where land() puts it
+        saucer = np.array([*m.SAUCER_XY, m.TOP])
+        m._fill(m.SAUCER_SPOTS, m.STATE["saucer"], (under - saucer)[:2], m.DROPPED * 0.85 * mass, m.SAUCER_BLOB)
+
+    def acts():
+        yield plan.together(plan.lift(), plan.fetch_knife())
+        yield from plan.scrape()
+        yield from plan.wipe()
+        yield from plan.press_aside()
+        yield from plan.lay_knife()
+        yield from plan.set_down_last()
+
+    script = acts()
+
+    def director(t: float, arms: dict, pictures) -> None:
+        if pictures is None or mk.MECH.environment is None or not mk.MECH.poses:
+            return
+        if not state["set"]:
+            setup()
+            state["set"] = True
+            return
+        while not state["over"] and t >= max(arm.seconds for arm in arms.values()) - 1e-6:
+            step = next(script, None)
+            if step is None:
+                state["over"] = True
+                break
+            longest = max(sum(move.seconds for move in moves) for moves in step.values())
+            for side in ("left", "right"):
+                moves = list(step.get(side, []))
+                if longest - sum(move.seconds for move in moves) > 1e-9:
+                    moves.append(plan.Move(longest - sum(move.seconds for move in moves), label="waits"))
+                arms[side].moves.extend(moves)
+
+    def tilt(rotation: np.ndarray) -> float:
+        return round(math.degrees(math.acos(min(1.0, abs(float(rotation[2, 2]))))), 2)
+
+    def extra() -> dict:
+        found = {"on press (N)": round(mk.contact_force("knife", "press"), 3), "on saucer (N)": round(mk.contact_force("knife", "saucer"), 3),
+                 "taken": sum(1 for v in m.STATE["hanging"] if v <= 0.0), "on the knife (g)": round(1000 * m.STATE["knife"], 4),
+                 "on the saucer (g)": round(1000 * sum(m.STATE["saucer"]), 4), "wiped (mm)": round(1000 * m.STATE["wiped"], 2),
+                 "press tilt (deg)": tilt(mk.pose("press")[1]), "saucer tilt (deg)": tilt(mk.pose("saucer")[1]), "hinge (deg)": round(math.degrees(mk.joint("hinge")), 2)}  # fmt: skip
+        knife_at, knife_rot = mk.pose("knife")
+        if plan.held_knife is not None:  # how far the knife has turned in the hand since the scrape began
+            hand_at, hand_rot = plan.hand("left")
+            now = hand_rot.T @ knife_rot
+            found["slip (deg)"] = round(math.degrees(math.acos(max(-1.0, min(1.0, (np.trace(now @ plan.held_knife[1].T) - 1) / 2)))), 2)
+        rows = plan.sieve_at() + np.array([-0.0145, 0.0145])  # the first and last rows of holes, along the blade as the script places it
+        corner = m.to_body("press", m.to_world("knife", np.array([[x, m.KNIFE_BLADE[1] / 2, m.BLADE_Z[1]] for x in rows])))
+        found["corner to the sieve (mm)"] = [round(1000 * (float(v) + m.HINGE_UW[1]), 2) for v in corner[:, 2]]  # the +y edge's top corner there: its height over the sieve's underside (w; 0 touching)
+        band = np.array([[x, m.KNIFE_BLADE[1] / 2, m.BLADE_Z[0]] for x in np.arange(rows[0] - m.BAND, rows[1] + m.BAND + 1e-9, 0.001)])  # the band the scrape loads (the underside's +y corner)
+        gaps = m.saucer_gap(m.to_body("saucer", m.to_world("knife", band)))
+        k = int(np.argmin(np.abs(gaps)))
+        found["band to the saucer (mm), where along it (mm)"] = [round(1000 * float(gaps[k]), 2), round(1000 * float(band[k][0] - band[0][0]), 1)]
+        return found
+
+    result = kit.run(embodiment, {"left": [], "right": []}, out / "knife", seed=seed, director=director, extra=extra, limit_s=60.0, tail_s=1.5, sheet_frames=16)
+    rows = result["rows"]
+
+    def during(*labels) -> list:
+        return [row["extra"] for row in rows if row.get("left") in labels and row.get("extra")]
+
+    def spread(values) -> list | None:
+        return [round(float(np.min(values)), 3), round(float(np.median(values)), 3), round(float(np.max(values)), 3)] if values else None
+
+    scraping = during("against it", "across")
+    wiping = during(*(label + again for label in ("press", "draw it back") for again in ("", " again")))
+    after_scrape = during("down off it", "out")
+    found = {"contact on the press while scraping, N (min, median, max)": spread([r["on press (N)"] for r in scraping]),
+             "corner to the sieve while scraping, mm at the first and last rows (min, median, max)": [spread([r["corner to the sieve (mm)"][k] for r in scraping]) for k in (0, 1)],
+             "band to the saucer while wiping, mm (min, median, max)": spread([r["band to the saucer (mm), where along it (mm)"][0] for r in wiping]),
+             "knife turned in the hand while scraping, deg (max)": max((r.get("slip (deg)", 0.0) for r in scraping), default=None),
+             "press tilt while scraping, deg (max)": max((r["press tilt (deg)"] for r in scraping), default=None),
+             "strands taken (of 30), on the knife (g) after scraping": [after_scrape[-1]["taken"], after_scrape[-1]["on the knife (g)"]] if after_scrape else None,
+             "contact on the saucer while wiping, N (min, median, max)": spread([r["on saucer (N)"] for r in wiping]),
+             "saucer tilt while wiping, deg (max)": max((r["saucer tilt (deg)"] for r in wiping), default=None),
+             "knife turned in the hand while wiping, deg (max)": max((r.get("slip (deg)", 0.0) for r in wiping), default=None),
+             "after wiping: on the knife, on the saucer (g), wiped (mm)": [wiping[-1]["on the knife (g)"], wiping[-1]["on the saucer (g)"], wiping[-1]["wiped (mm)"]] if wiping else None,
+             "score at the end": rows[-1]["info"].get("score") if rows else None, "at the end": rows[-1]["extra"] if rows else None,
+             "report": result["report"], "events": m.STATE["events"], "worst IK": result["worst_ik"]}  # fmt: skip
+    print(f"KNIFE {json.dumps(found, default=str)}", flush=True)
     return found
 
 
@@ -291,7 +382,7 @@ def main() -> int:
     out = Path(sys.argv[1])
     trials = sys.argv[2].split(",") if len(sys.argv) > 2 else ["rest"]
     seeds = [int(v) for v in sys.argv[3].split(",")] if len(sys.argv) > 3 else [0]
-    known = {"rest": rest, "drop": drop, "press": press}
+    known = {"rest": rest, "drop": drop, "press": press, "knife": knife}
     if any(name not in known for name in trials):
         raise SystemExit(f"trials here: {sorted(known)}; got {trials}")
     out.mkdir(parents=True, exist_ok=True)

@@ -19,8 +19,13 @@ down SPRINGBACK behind it (what comes back when the press is let go). It pushes 
 the clove is free. Past the yield, garlic goes through the sieve in proportion to the plunger's travel, THROUGH_MOST of the pressed
 part with the face 3 mm over the floor. Of what goes through, DROPPED falls straight down onto whatever is under the
 sieve, HANGING hangs under it as strands (one per hole), unless the sieve rests on the board: then it all goes onto
-the board. A strand goes onto the knife when either long edge of its blade passes under its hole within
-SCRAPE_REACH; the knife's load goes onto the saucer when the blade touches the saucer.
+the board. Garlic moves to the knife and from it only by contact, read from the simulator's contact sensor on the
+knife (scrape(), wipe()): a strand goes onto the knife when the blade presses on the sieve with SCRAPE_PRESS or more
+and an edge of the blade slides past the strand's hole with the blade on the sieve there (lying flat, a long edge
+passes under the hole; standing on its edge, a corner of that edge does); the knife's load leaves it when the blade
+presses on the saucer with WIPE_PRESS or more and its loaded part (along the corner that took garlic, BAND either side
+of where it took it) touches the saucer, well or rim, and is drawn along it: in proportion to the length drawn, all of
+it after WIPE_LENGTH. Near but not touching, or touching without sliding: nothing moves.
 """
 
 from __future__ import annotations
@@ -49,20 +54,25 @@ GRAVITY = 9.81
 WALNUT, ALUMINIUM, DARK, SLATE, STEEL, GARLIC = (0.33, 0.22, 0.15), (0.76, 0.77, 0.79), (0.18, 0.18, 0.19), (0.24, 0.26, 0.29), (0.72, 0.74, 0.77), (0.93, 0.89, 0.74)
 
 # --- the garlic, as a material: every number the simulation takes for the clove, with its source -------------------
-# "assumed": to be measured with the owner's kitchen test (README, "The clove as a material").
+# "assumed": our estimate; the README ("The clove as a material") says how a bench measures it.
 MATERIAL = {
     "length_mm": ((26.0, 31.0), "bench text (designer, 2026-11-20): one clove of 4 to 6 g, 26 to 31 mm long, taken from a bag of ready-peeled garlic cloves as supermarkets sell them (for instance Christopher Ranch Peeled Garlic), the bag within its use-by date and kept closed in a refrigerator at 2 to 4 C (36 to 40 F); the clove taken out of the refrigerator not more than 10 minutes before the trial and patted dry with a paper towel; a clove with a cut or bruised surface is not used"),
     "width_mm": ((14.0, 19.0), "assumed from the size of such cloves"),
     "thickness_mm": ((11.0, 15.0), "assumed from the size of such cloves"),
     "mass_g": ((4.0, 6.0), "bench text (as length_mm)"),
     "friction": (0.3, "assumed: a peeled clove is slippery"),
-    "yield_at_plunger_N": (250.0, "assumed; to be measured: the press on a kitchen scale, the peak reading while a clove goes through"),
-    "compression_to_yield_mm": (3.0, "assumed; to be measured: the plunger's travel from touching the clove to that peak"),
+    "yield_at_plunger_N": (250.0, "assumed; a bench measures it with the press on a kitchen scale, the peak reading while a clove goes through"),
+    "compression_to_yield_mm": (3.0, "assumed; a bench measures it as the plunger's travel from touching the clove to that peak"),
     "springback_mm": (1.0, "assumed: how far the plunger comes back up when the press is let go"),
     "through_at_3mm": (0.85, "assumed: with the plunger 3 mm from the floor 85 % of the clove's weight is through the sieve, 15 % stays as skin and fibre"),
     "dropped_share": (0.30, "assumed: of what is through, 30 % drops straight down"),
-    "hanging_share": (0.70, "assumed: of what is through, 70 % hangs under the sieve until a blade's edge passes within 1 mm"),
-    "scrape_reach_mm": (1.0, "assumed"),
+    "hanging_share": (0.70, "assumed: of what is through, 70 % hangs under the sieve as strands, until a blade scrapes them off (scrape())"),
+    "scrape_press_N": (0.5, "set from a reading: the blade presses on the sieve with at least this, as the simulator's contact sensor reads it, for its edge to take a strand (the scripted scrape read 1.18 N, median over its run across, trial b3g16; a blade near but not touching reads 0)"),
+    "edge_touch_mm": (0.5, "assumed: the blade's face this near the sieve under a hole touches it there (the solver keeps touching bodies within a few hundredths of a millimetre)"),
+    "proud_mm": (1.5, "assumed: the scraped garlic stands this far proud of the blade's face along the edge that took it; that edge this near the saucer's surface puts the garlic on it"),
+    "wipe_press_N": (0.5, "set from a reading, as for the sieve: the blade presses on the saucer with at least this while it is wiped (the scripted wipe read 1.19 N on the rim, median, trial b3g16)"),
+    "wipe_mm": (30.0, "assumed: the loaded edge drawn this far along the saucer leaves all its garlic there, in proportion before"),
+    "band_mm": (3.0, "assumed: a strand's garlic lies along the edge that took it, this far either side of where it was taken (strands taken 5.8 mm apart join up)"),
     "strand_mm": ((6.0, 10.0), "designer: the garlic hangs as strands 6 to 10 mm long"),
 }
 CLOVE_FRICTION = MATERIAL["friction"][0]
@@ -72,7 +82,8 @@ SPRINGBACK = MATERIAL["springback_mm"][0] / 1000.0
 THROUGH_MOST = MATERIAL["through_at_3mm"][0]
 THROUGH_FACE = 0.003  # m: the plunger's face this far over the floor: THROUGH_MOST is through
 DROPPED, HANGING = MATERIAL["dropped_share"][0], MATERIAL["hanging_share"][0]
-SCRAPE_REACH = MATERIAL["scrape_reach_mm"][0] / 1000.0
+SCRAPE_PRESS, WIPE_PRESS = MATERIAL["scrape_press_N"][0], MATERIAL["wipe_press_N"][0]  # N
+EDGE_TOUCH, PROUD, WIPE_LENGTH, BAND = (MATERIAL[k][0] / 1000.0 for k in ("edge_touch_mm", "proud_mm", "wipe_mm", "band_mm"))  # m
 CLOVES = tuple(f"clove_{k}" for k in range(4))  # declared below; named here so that the press's upper part can pass them
 
 # --- the board: walnut, 250 x 150 x 30 mm, about 0.73 kg (650 kg/m3, assumed), loose, its long side along y; dark, so that
@@ -88,12 +99,13 @@ _board_mid = ((BOARD_X[0] + BOARD_X[1]) / 2, (BOARD_Y[0] + BOARD_Y[1]) / 2)
 _board_shapes += [cylinder(0.0045, 0.002, pos=(x, y - _board_mid[1], BOARD_T / 2 + 0.001), color=GARLIC, solid=False) for x, y in BOARD_SPOTS]
 body("board", _board_shapes, pos=(*_board_mid, TOP + BOARD_T / 2), mass=BOARD_MASS, color=WALNUT, friction=BOARD_FRICTION)
 
-# --- the garlic press: Zyliss Susi 3, cast aluminium, 155 x 26 x 57 mm closed, 150 g (retailers' figures). Every
-# other size is assumed from product pictures, to be measured on the bought press. In the press's own coordinates
-# (m): u along it from its tip (the hinge end) to the grip end, v across, w up from the underside of the lower
-# handle, which is also the underside of the sieve. The lower part: lower handle and chamber (inside 34 x 24 mm,
-# 24 mm deep; its floor the sieve, thirty 2.5 mm holes); the upper part: upper handle and plunger (face 31 x 22 mm,
-# its middle 26 mm from the hinge pin). The two parts' masses are assumed: 80 and 70 g. ---
+# --- the garlic press: Zyliss Susi 3, cast aluminium, 155 x 26 x 57 mm closed (the maker's page), about 150 g (our
+# figure: the maker states no weight); its clip-in cleaning tool is taken out. Every other size is our reading of the
+# maker's product pictures. In the press's own coordinates (m): u along it from its tip (the hinge end) to the grip
+# end, v across, w up from the underside of the lower handle, which is also the underside of the sieve. The lower
+# part: lower handle and chamber (inside 34 x 24 mm, 24 mm deep; its floor the sieve, thirty 2.5 mm holes); the upper
+# part: upper handle and plunger (face 31 x 22 mm, its middle 26 mm from the hinge pin). The two parts' masses are
+# assumed: 80 and 70 g. ---
 PRESS_X = 0.280  # the press's middle line, along y
 START_TIP_Y = BOARD_Y[1] - 0.010  # where its tip lies at the start: 10 mm inside the board's left edge, the press wholly on the board
 PRESSING_OVERHANG = 0.051  # m of the press past the board's edge where it is pressed: the chamber's outer wall 2 mm past the edge
@@ -256,16 +268,20 @@ KNIFE_AT = (0.2175, 0.200)  # the handle's middle: the handle from x 0.170 to 0.
 BLADE_X = (KNIFE_HANDLE[0] / 2, KNIFE_HANDLE[0] / 2 + KNIFE_BLADE[0])  # the blade's span along the knife (to the end of its round tip)
 BLADE_Z = (-KNIFE_HANDLE[2] / 2, -KNIFE_HANDLE[2] / 2 + KNIFE_BLADE[2])  # its underside and top face (knife frame)
 _blade_x = KNIFE_HANDLE[0] / 2 + (KNIFE_BLADE[0] - KNIFE_BLADE[1] / 2) / 2  # the blade's straight part, then its round tip
-KNIFE_SPOTS = [float(x) for x in np.linspace(BLADE_X[0] + 0.020, BLADE_X[1] - 0.015, 6)]  # garlic on the blade's top face
-KNIFE_BLOB = 0.0004  # kg a drawn spot holds
+KNIFE_SPOTS = [float(x) for x in np.arange(BLADE_X[0] + 0.004, BLADE_X[1] - 0.0119, 0.007)]  # places along the blade where garlic is drawn
+KNIFE_CORNERS = ((1, 1), (1, -1), (-1, 1), (-1, -1))  # (face, edge) of the blade that can carry garlic: top or underside, along its +y or -y edge
 KNIFE_SHAPES = [
     box(KNIFE_HANDLE, pos=(0.0, 0.0, 0.0)),
     box((KNIFE_BLADE[0] - KNIFE_BLADE[1] / 2, KNIFE_BLADE[1], KNIFE_BLADE[2]), pos=(_blade_x, 0.0, (BLADE_Z[0] + BLADE_Z[1]) / 2)),
     cylinder(KNIFE_BLADE[1] / 2, KNIFE_BLADE[2], pos=(BLADE_X[1] - KNIFE_BLADE[1] / 2, 0.0, (BLADE_Z[0] + BLADE_Z[1]) / 2)),
 ]
-LOAD_SHAPES = range(len(KNIFE_SHAPES), len(KNIFE_SHAPES) + len(KNIFE_SPOTS))
-KNIFE_SHAPES += [cylinder(0.005, 0.002, pos=(x, 0.0, BLADE_Z[1] + 0.001), color=GARLIC, solid=False) for x in KNIFE_SPOTS]
+LOAD_SHAPES = {}  # (face, edge) -> the shapes drawing garlic there: a strip 4 mm wide along that edge on that face, standing PROUD off it
+for _face, _edge in KNIFE_CORNERS:
+    LOAD_SHAPES[(_face, _edge)] = range(len(KNIFE_SHAPES), len(KNIFE_SHAPES) + len(KNIFE_SPOTS))
+    KNIFE_SHAPES += [box((0.007, 0.004, 0.0015), pos=(x, _edge * (KNIFE_BLADE[1] / 2 - 0.002), BLADE_Z[1] + 0.00075 if _face > 0 else BLADE_Z[0] - 0.00075), color=GARLIC, solid=False)
+                     for x in KNIFE_SPOTS]  # fmt: skip
 body("knife", KNIFE_SHAPES, pos=(*KNIFE_AT, TOP + KNIFE_HANDLE[2] / 2), mass=KNIFE_MASS, color=STEEL, friction=(0.4, 0.35))
+mk.sense_contact("knife", "press", "saucer")  # the knife's contact with the press's lower part (the sieve) and with the saucer: scrape(), wipe()
 
 # --- garlic dropped onto the bare bench: one heap, drawn where the last drop landed (moved by the task) ---
 SPILL_PARK = np.array([0.40, 0.0, FLOOR_Z + 0.01])
@@ -334,7 +350,6 @@ SAUCER_FULL, SAUCER_PART, THROUGH_ENOUGH, WASTE_MOST = 0.65, 0.45, 0.70, 1.0 / 3
 ON_BENCH = 0.02  # m: the saucer or the board this far under the bench top has left it
 LYING = 0.003  # m: a lying press or knife has its lowest point within this of the board's or the bench's top
 RESTING, CLEAR, SETTLE_S = 0.02, 0.03, 0.25  # m/s over the last SETTLE_S; m both grippers keep from press and knife
-TOUCHING = 0.0015  # m: the blade this near the saucer's surface touches it
 SIDES = ("left", "right")
 STATE: dict = {}
 
@@ -361,14 +376,14 @@ def begin(seed: int | None = None) -> dict:
     k, side, yaw, x, y = lie(seed)
     STATE.update(seed=seed, clove=CLOVES[k], mass=CLOVE_SIZES[k][3], lie=(k, side, yaw, x, y), touched=False, top=None, inside=0.0, waste=0.0,
                  lowest=None, rest=None, cap=0.0, touch=None, crush=0.0, contact=False, through=0.0, hanging=[0.0] * len(HOLES), knife=0.0, saucer=[0.0] * len(SAUCER_SPOTS),
-                 board=[0.0] * len(BOARD_SPOTS), bench=0.0, edges=None, track=[], events=[])  # fmt: skip
+                 board=[0.0] * len(BOARD_SPOTS), bench=0.0, edges=None, loaded=[], carried=0.0, wipe_at=None, wiped=0.0, track=[], events=[])  # fmt: skip
     return STATE
 
 
 @mk.on_reset
 def start(seed) -> None:
     begin(seed)
-    for name, shapes in (("press", (*STRAND_SHAPES, *MASH_SHAPES, *RIM_SHAPES)), ("saucer", SAUCER_SHAPES), ("knife", LOAD_SHAPES), ("board", BOARD_SHAPES), ("spill", (0,))):
+    for name, shapes in (("press", (*STRAND_SHAPES, *MASH_SHAPES, *RIM_SHAPES)), ("saucer", SAUCER_SHAPES), ("knife", [k for shapes in LOAD_SHAPES.values() for k in shapes]), ("board", BOARD_SHAPES), ("spill", (0,))):
         for k in shapes:
             mk.show(name, k, False)
     if mk.MECH.environment is not None:
@@ -560,49 +575,115 @@ def press_on() -> None:
                 STATE["hanging"][k] += HANGING * more / len(HOLES)
 
 
-def scrape() -> None:
-    """A strand goes onto the knife when either long edge of the blade passes under its hole within SCRAPE_REACH."""
-    holes = to_body("knife", to_world("press", np.array([uvw(u, v, 0.0) for u, v in HOLES])))
-    before, STATE["edges"] = STATE["edges"], holes
-    if before is None:
-        return
+HOLES_SIEVE = np.array([uvw(u, v, 0.0) for u, v in HOLES])  # the holes' mouths on the sieve's underside, press frame
+
+
+SLIDE_MIN = 0.00005  # m a hole moves past a blade's edge in one control step for it to count as sliding (1 mm/s at 20 Hz; the solver's tremble of a still blade is far less)
+
+
+def _corner_passed(was, now, flat: bool) -> tuple[int, int] | None:
+    """The corner of the blade's cross-section (face: +1 top, -1 underside; edge: +1, -1 the long edge at +-y) that a
+    point moving from ``was`` to ``now`` ((y, z) in the knife's frame) slides past while on the blade (within
+    EDGE_TOUCH of it). ``flat``: the blade lies flat on the sieve, and a point on a face that crosses a long edge
+    counts (the garlic goes onto that face); else it stands on an edge, and a point on that edge that crosses either
+    face's corner counts (the garlic goes onto the face the point comes from: the one that leads into the strand).
+    Moving less than SLIDE_MIN past it: None."""
+    (y0, z0), (y, z) = was, now
     half = KNIFE_BLADE[1] / 2
-    middle = (BLADE_Z[0] + BLADE_Z[1]) / 2
-    for k, (x, y, z) in enumerate(holes):
-        if STATE["hanging"][k] <= 0.0 or not BLADE_X[0] <= x <= BLADE_X[1]:
-            continue
-        gap = z - BLADE_Z[1] if z >= middle else BLADE_Z[0] - z  # from the blade's face to the sieve's underside
-        if not -0.0005 <= gap <= SCRAPE_REACH:
-            continue
-        y0 = before[k][1]
-        if any((y0 - edge) * (y - edge) <= 0.0 for edge in (half, -half)):
-            STATE["knife"] += STATE["hanging"][k]
-            STATE["hanging"][k] = 0.0
-            if mk.MECH.environment is not None:
-                mk.redraw(2)
-
-
-BLADE_PROBES = np.array([[x, y, z] for x in np.linspace(BLADE_X[0], BLADE_X[1], 9) for y in (-KNIFE_BLADE[1] / 2, 0.0, KNIFE_BLADE[1] / 2) for z in BLADE_Z])
-
-
-def blade_on_saucer() -> np.ndarray | None:
-    """Where (saucer frame, x y) the blade touches the saucer, or None."""
-    probes = to_body("saucer", to_world("knife", BLADE_PROBES))
-    for x, y, z in probes:
-        surface = saucer_surface(math.hypot(x, y))
-        if surface is not None and z - surface <= TOUCHING and z >= -0.002:
-            return np.array([x, y])
+    if flat:
+        for face, level in ((1, BLADE_Z[1]), (-1, BLADE_Z[0])):
+            if abs(z - level) <= EDGE_TOUCH:  # on (or a hair into) that face's plane
+                for edge in (1, -1):
+                    if (y0 - edge * half) * (y - edge * half) <= 0.0 and abs(y - y0) >= SLIDE_MIN:
+                        return face, edge
+        return None
+    for edge in (1, -1):
+        if abs(y - edge * half) <= EDGE_TOUCH and abs(z - z0) >= SLIDE_MIN:  # on that edge, sliding
+            if any((z0 - level) * (z - level) <= 0.0 for level in BLADE_Z):
+                return (-1 if z > z0 else 1), edge  # from the underside's side (z rising): the underside leads
     return None
 
 
-def deposit() -> None:
-    if STATE["knife"] <= 0.0:
+def scrape() -> None:
+    """A strand goes onto the knife only by contact and scraping: while the blade presses on the press's lower part
+    with SCRAPE_PRESS or more (the simulator's contact sensor, mean over the control step), an edge of the blade slides
+    past the strand's hole with the blade on the sieve there (within EDGE_TOUCH): lying flat on the sieve (the sieve's
+    face square to the blade's faces more than to its edges), a long edge passes under the hole; standing on its edge,
+    a corner of that edge does. Near but not touching, touching without sliding, or pressed onto a hole: nothing. Where
+    it rides is noted for wipe(): the corner that took it (a face and an edge), at that place along the blade."""
+    holes = to_body("knife", to_world("press", HOLES_SIEVE))
+    before, STATE["edges"] = STATE["edges"], holes
+    if before is None or mk.contact_force("knife", "press") < SCRAPE_PRESS:
         return
-    at = blade_on_saucer()
-    if at is not None:
-        _fill(SAUCER_SPOTS, STATE["saucer"], at, STATE["knife"], SAUCER_BLOB)
-        STATE["events"].append((round(mk.now(), 2), f"{1000 * STATE['knife']:.2f} g off the knife onto the saucer"))
+    normal = mk.pose("knife")[1].T @ mk.pose("press")[1][:, 2]  # the sieve's face's normal in the knife's frame
+    flat = abs(normal[2]) >= abs(normal[1])
+    for k, (x, y, z) in enumerate(holes):
+        if STATE["hanging"][k] <= 0.0 or not BLADE_X[0] <= x <= BLADE_X[1]:
+            continue
+        corner = _corner_passed(before[k][1:], (y, z), flat)
+        if corner is None:
+            continue
+        STATE["knife"] += STATE["hanging"][k]
+        STATE["hanging"][k] = 0.0
+        STATE["carried"] = max(STATE["carried"], STATE["knife"])
+        STATE["loaded"].append((*corner, float(x)))
+        if mk.MECH.environment is not None:
+            mk.redraw(2)
+
+
+def saucer_gap(points: np.ndarray) -> np.ndarray:
+    """m from points in the saucer's frame to its upper surface (the well, then the rim's slope up to its top edge),
+    measured square to the surface; negative under it."""
+    r, z = np.hypot(points[:, 0], points[:, 1]), points[:, 2]
+    a, b = np.array([WELL_R, WELL_W]), np.array([RIM_OUTER, SAUCER_H])
+    slope = (b - a) / np.linalg.norm(b - a)
+    normal = np.array([-slope[1], slope[0]])  # up and inwards
+    on_slope = np.column_stack([r, z]) - a
+    t = on_slope @ slope
+    gap = np.where(r <= WELL_R, z - WELL_W, np.where(t <= np.linalg.norm(b - a), on_slope @ normal, np.hypot(r - b[0], z - b[1])))
+    return gap
+
+
+def loaded_points() -> np.ndarray:
+    """Where the garlic rides, in the knife's frame: along each corner (a face and an edge) that took some, BAND either
+    side of every place it was taken there, a point every millimetre."""
+    half, points = KNIFE_BLADE[1] / 2, []
+    for face, edge in sorted({(f, e) for f, e, _ in STATE["loaded"]}):
+        places = [x for f, e, x in STATE["loaded"] if (f, e) == (face, edge)]
+        xs = np.arange(max(BLADE_X[0], min(places) - BAND), min(BLADE_X[1], max(places) + BAND) + 1e-9, 0.001)
+        xs = [x for x in xs if min(abs(x - p) for p in places) <= BAND + 1e-9]
+        points += [[x, edge * half, BLADE_Z[1] if face > 0 else BLADE_Z[0]] for x in xs]
+    return np.array(points)
+
+
+def wipe() -> None:
+    """The knife's load leaves it only by wiping: while the blade presses on the saucer with WIPE_PRESS or more (the
+    contact sensor) and its loaded part (loaded_points()) touches the saucer's surface, well or rim (within PROUD: the
+    garlic stands that far proud of the blade), and is drawn along it, the garlic goes onto the saucer in proportion to
+    the length drawn, all of it after WIPE_LENGTH. Near but not touching, touching without being drawn, or touching
+    with another part of the blade: nothing."""
+    if STATE["knife"] <= 0.0 or not STATE["loaded"]:
+        STATE["wipe_at"] = None
+        return
+    points = to_body("saucer", to_world("knife", loaded_points()))
+    touching = np.abs(saucer_gap(points)) <= PROUD
+    before, STATE["wipe_at"] = STATE["wipe_at"], (points, touching)
+    if before is None or len(before[0]) != len(points) or mk.contact_force("knife", "saucer") < WIPE_PRESS:
+        return
+    both = touching & before[1]
+    if not both.any():
+        return
+    drawn = float(np.linalg.norm(points[both] - before[0][both], axis=1).mean())
+    amount = min(STATE["knife"], STATE["carried"] * drawn / WIPE_LENGTH)
+    if amount <= 0.0:
+        return
+    at = points[both].mean(axis=0)
+    _fill(SAUCER_SPOTS, STATE["saucer"], at[:2], amount, SAUCER_BLOB)
+    STATE["knife"] -= amount
+    STATE["wiped"] += drawn
+    if STATE["knife"] <= 1e-9:
         STATE["knife"] = 0.0
+        STATE["events"].append((round(mk.now(), 2), f"{1000 * STATE['carried']:.2f} g wiped off the knife onto the saucer, drawn {1000 * STATE['wiped']:.1f} mm along it"))
 
 
 def draw() -> None:
@@ -618,9 +699,14 @@ def draw() -> None:
         mk.show("saucer", SAUCER_SHAPES[k], STATE["saucer"][k] > 0.25 * SAUCER_BLOB)
     for k in range(len(BOARD_SPOTS)):
         mk.show("board", BOARD_SHAPES[k], STATE["board"][k] > 0.25 * BOARD_BLOB)
-    shown = int(math.ceil(STATE["knife"] / KNIFE_BLOB - 0.25)) if STATE["knife"] > 0 else 0
-    for k in range(len(KNIFE_SPOTS)):
-        mk.show("knife", LOAD_SHAPES[k], k < shown)
+    left = STATE["knife"] / STATE["carried"] if STATE["carried"] > 0 else 0.0  # the share of what it took still on the knife
+    for corner, shapes in LOAD_SHAPES.items():
+        places = [x for f, e, x in STATE["loaded"] if (f, e) == corner]
+        band = [k for k, x in enumerate(KNIFE_SPOTS) if places and min(abs(x - p) for p in places) <= BAND + 0.0035]  # the spots over its band
+        keep = int(math.ceil(left * len(band) - 1e-9))
+        shown = set(band[len(band) - keep :]) if keep > 0 else set()  # wiped off from the heel's end first, as a rim drawn towards the tip takes it
+        for k, shape in enumerate(shapes):
+            mk.show("knife", shape, k in shown)
     if STATE["bench"] > 0 and not STATE.get("spilled"):
         STATE["spilled"] = True
         mk.show("spill", 0, True)
@@ -634,7 +720,7 @@ def step() -> None:
         return
     press_on()
     scrape()
-    deposit()
+    wipe()
     draw()
     track()
 

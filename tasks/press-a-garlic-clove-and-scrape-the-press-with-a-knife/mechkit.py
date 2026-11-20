@@ -508,6 +508,8 @@ class _Registry:
     redraw: int = 0  # control steps for which the renderer still forgets its earlier frames (see ``redraw``)
     body_prims: dict[str, str] = field(default_factory=dict)  # body -> its prim in the simulator's stage, once built
     joint_prims: dict[str, str] = field(default_factory=dict)  # joint -> its prim in the simulator's stage, once built
+    sensed: dict[str, tuple[str, ...]] = field(default_factory=dict)  # body -> the bodies its contact sensor reads (see ``sense_contact``)
+    contacts: dict[tuple[str, str], float] = field(default_factory=dict)  # (body, other) -> N between them over the last control step
     environment: Any = None
     steps: int = 0
     time: float = 0.0  # seconds since the reset, as of the control step being scored
@@ -517,6 +519,7 @@ class _Registry:
     def clear(self) -> None:
         """Forget everything declared."""
         self.bodies.clear(), self.joints.clear(), self.reset_hooks.clear(), self.step_hooks.clear(), self.joint_prims.clear(), self.body_prims.clear()
+        self.sensed.clear()
         self.hidden.clear(), self.reweighed.clear(), self.pushed.clear(), self.cut.clear(), self.joined.clear()
         self.redraw = 0
         self.new_episode()
@@ -525,7 +528,7 @@ class _Registry:
     def new_episode(self) -> None:
         """Forget what was read from the simulator."""
         self.poses.clear(), self.velocities.clear(), self.travel.clear(), self.grippers.clear(), self.written.clear()
-        self.held.clear(), self.before.clear(), self.thrown.clear()
+        self.held.clear(), self.before.clear(), self.thrown.clear(), self.contacts.clear()
         self.steps, self.time = 0, 0.0
 
 
@@ -631,11 +634,13 @@ def seed() -> int | None:
 
 
 def set_state(poses: dict | None = None, velocities: dict | None = None, *, joints: dict | None = None, grippers: dict | None = None,
-              time: float | None = None) -> None:  # fmt: skip
+              time: float | None = None, contacts: dict | None = None) -> None:  # fmt: skip
     """Put a state in by hand: for tests of ``score()`` and of step hooks without the simulator. Bodies stand as
     built, then ``joints`` (name -> travel) place their children (parents first, in the order the joints were
     declared), then ``poses`` (name -> (position, rotation matrix)) override. ``grippers``: side -> (grasp
-    point, opening); ``time``: seconds since the reset. What is not given keeps its last value, except poses."""
+    point, opening); ``time``: seconds since the reset; ``contacts``: (body, other) -> N, what ``contact_force``
+    reads (pairs declared with ``sense_contact``; a pair not given reads 0). What is not given keeps its last value,
+    except poses and contacts."""
     MECH.poses = {name: built_pose(name) for name in MECH.bodies}
     for name, j in MECH.joints.items():
         if joints and name in joints:
@@ -654,6 +659,60 @@ def set_state(poses: dict | None = None, velocities: dict | None = None, *, join
         MECH.grippers[side] = (np.asarray(point, dtype=float), float(opening))
     if time is not None:
         MECH.time = float(time)
+    MECH.contacts.clear()
+    for (name, other), force in (contacts or {}).items():
+        _check_sensed(name, other)
+        MECH.contacts[(name, other)] = float(force)
+
+
+def sense_contact(name: str, *others: str) -> None:
+    """Give free body ``name`` a contact sensor that reads the normal force between it and each of ``others`` (free
+    or kinematic bodies), for ``contact_force``. Declare it after the bodies, before the simulator starts. The
+    simulator reports the force at every physics step; ``contact_force`` gives the mean over the last control
+    step's physics steps, so that a single step's chatter does not decide."""
+    spec = MECH.bodies.get(name)
+    if spec is None or not spec.free:
+        raise ValueError(f"{name}: a contact sensor needs a free body declared before it")
+    if not others:
+        raise ValueError(f"{name}: name the bodies whose contact with it the sensor reads")
+    for other in others:
+        o = MECH.bodies.get(other)
+        if o is None or not (o.free or o.kinematic) or other == name:
+            raise ValueError(f"{name}: {other!r} is not another free or kinematic body declared before the sensor")
+    MECH.sensed[name] = tuple(dict.fromkeys(MECH.sensed.get(name, ()) + tuple(others)))
+
+
+def _check_sensed(name: str, other: str) -> None:
+    if other not in MECH.sensed.get(name, ()):
+        raise ValueError(f"no contact sensor on {name!r} reads {other!r}: declare it with sense_contact({name!r}, {other!r})")
+
+
+def contact_force(name: str, other: str) -> float:
+    """N: the normal force between bodies ``name`` and ``other`` (a pair declared with ``sense_contact``), the mean
+    over the physics steps of the control step being scored; 0 while they do not touch. Without the simulator,
+    what ``set_state(contacts=...)`` put in."""
+    _check_sensed(name, other)
+    return MECH.contacts.get((name, other), 0.0)
+
+
+CONTACT_SENSOR = "mech_contact_"  # the scene's name of the contact sensor on a body is this followed by the body's name
+
+
+def _read_contacts(env) -> None:
+    """Fill MECH.contacts from the scene's contact sensors (environment 0): for each pair, the size of the normal
+    force averaged over the physics steps the sensor's history holds (one control step's)."""
+    import torch
+
+    sensors = env.unwrapped.scene.sensors
+    for name, others in MECH.sensed.items():
+        data = sensors[CONTACT_SENSOR + name].data
+        history = data.normal_force_matrix_w_history
+        if history is not None:
+            sizes = torch.linalg.norm(history.torch[0, :, 0], dim=-1).mean(dim=0)  # (history, filter, xyz) -> (filter,)
+        else:
+            sizes = torch.linalg.norm(data.normal_force_matrix_w.torch[0, 0], dim=-1)
+        for k, other in enumerate(others):
+            MECH.contacts[(name, other)] = float(sizes[k])
 
 
 def _update_travel() -> None:
@@ -1191,6 +1250,8 @@ def _spawner(spec: Body):
             )  # fmt: skip
         elif spec.kinematic:
             schemas.define_rigid_body_properties(prim_path, PhysxRigidBodyPropertiesCfg(kinematic_enabled=True, disable_gravity=True), stage=stage)
+        if spec.name in MECH.sensed or any(spec.name in others for others in MECH.sensed.values()):
+            schemas.activate_contact_sensors(prim_path, threshold=0.0, stage=stage)  # PhysX reports this body's contacts (see sense_contact)
         env_ns = prim_path.rsplit("/", 1)[0]
         for j in MECH.joints.values():
             if j.child == spec.name:
@@ -1297,6 +1358,8 @@ def _patch_scene(scene) -> None:
             MECH.steps += 1
             MECH.time = MECH.steps * float(env.unwrapped.step_dt)
             _read_bodies(env)
+            if MECH.sensed:
+                _read_contacts(env)
             _tick_redraw()
             if MECH.step_hooks:
                 for hook in MECH.step_hooks:
@@ -1310,6 +1373,13 @@ def _patch_scene(scene) -> None:
 
         def configure_with_buffers(env_cfg):
             env_cfg = configure(env_cfg)
+            if MECH.sensed:
+                from isaaclab.sensors import ContactSensorCfg
+
+                for name, others in MECH.sensed.items():  # one sensor per body, its history one control step of physics steps
+                    sensor = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/" + name, filter_prim_paths_expr=["{ENV_REGEX_NS}/" + o for o in others],
+                                              update_period=0.0, history_length=max(1, int(env_cfg.decimation)))  # fmt: skip
+                    setattr(env_cfg.scene, CONTACT_SENSOR + name, sensor)
             try:
                 from isaaclab_physx.physics import PhysxCfg
 
