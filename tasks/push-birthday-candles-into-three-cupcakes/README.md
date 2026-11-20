@@ -65,10 +65,11 @@ wax, below).
   4 N at 4 mm of closing (below). Flat pads on a cupcake that is wider at the top (60 mm) than at the base (50) touch
   only its rim, the edge of the icing cap, 35 mm over the board, and that is where the squeeze is read: how far the
   pads have closed past touch on the rim (the pads' gap against the rim's 60 mm).
-- **A squashed cupcake is a piece swapped in.** Each cupcake's squashed shape is built beforehand (6 mm lower, 55.5 mm
-  across where the pads pressed, 6 mm wider the other way) and waits on a shelf 40 cm under the bench, out of every
-  camera's view. When the closing reaches 4 mm, the cupcake goes to the shelf and its squashed shape takes its place,
-  turned so that its narrow side lies between the pads; a candle in it comes loose.
+- **A squashed cupcake is a piece swapped in, a drawing only.** Each cupcake's squashed shape is built beforehand and
+  waits on a shelf 40 cm under the bench, out of every camera's view. When the closing reaches 4 mm, the cupcake goes
+  to the shelf and its squashed shape takes its place, turned so that its narrow side lies between the pads; a candle
+  in it comes loose. Its size (6 mm lower, 55.5 mm across where the pads pressed, 6 mm wider the other way) is assumed
+  and is not scored: what scores a squeeze is the closing, in the simulation and on the bench (Rules).
 - **A candle in a cupcake.** A rigid cake cannot hold a candle that has gone into it, and a weld would hold it at any
   depth. Every candle carries three hidden bodies at its tip (rods inside the candle, carried weightless): when its
   tip goes into a cupcake's top (within the rim), they are joined to the cupcake where the tip went in. From then on
@@ -119,7 +120,7 @@ wax, below).
 | cupcake on beech | friction 0.5 | assumed: step 1, the board tilted until a cupcake slides |
 | squeeze across the rim | 1 mm per N; squashed for good at 4 mm of closing past touch (4 N) | assumed: step 3 |
 | the cupcake's surface give | 420 N/m per contact | calibrated in the simulation to the line above at 4 mm (run `w7c-g1`) |
-| squashed cupcake | 6 mm lower and wider | assumed: step 3 |
+| squashed cupcake (drawn only, not scored) | 6 mm lower and wider | assumed |
 | candle | 63 x 5 mm, 1 g | Wilton 2 1/2 in (length); assumed: diameter and mass, to be measured on the bought box |
 | candle in the simulation | 10 g, 9 g of it carried | a stand-in for the solver (above) |
 | candle through the icing cap | 3 N until the tip is 2 mm in | assumed: step 2 |
@@ -143,7 +144,7 @@ between two flat things, one of them on the scale: the reading and the millimetr
 
 | Score | Asked | On a real bench |
 |---|---|---|
-| 1.0 | each cupcake carries one candle that stands by itself, not more than 10 degrees off the vertical, at least 12 mm deep (not more than 51 mm showing), within 12 mm of the middle of the top; no cupcake squashed (4 mm or more of closing past touch), none off the board or tilted 30 degrees or more; no candle snapped; both grippers clear (the point between each gripper's pads 6 cm from the middle of every cupcake's top and 7 cm from the lower end of every candle in one); nothing moving (every cupcake and candle slower than 5 mm/s and 0.05 rad/s) | a photo from the side of each cupcake against a set square (the lean), a rule (the candle's height above the icing), a 32 mm block beside the cupcake (its height; a squashed one is 29 mm), the video (a snapped candle, the hands, at rest) |
+| 1.0 | each cupcake carries one candle that stands by itself, not more than 10 degrees off the vertical, at least 12 mm deep (not more than 51 mm showing), within 12 mm of the middle of the top; no cupcake squashed (4 mm or more of closing past touch), none off the board or tilted 30 degrees or more; no candle snapped; both grippers clear (the point between each gripper's pads 6 cm from the middle of every cupcake's top and 7 cm from the lower end of every candle in one); nothing moving (every cupcake and candle slower than 5 mm/s and 0.05 rad/s) | a photo from the side of each cupcake against a set square (the lean), a rule (the candle's height above the icing), the fixed rim camera's calibrated video (the squeeze: below), the video (a snapped candle, the hands, at rest) |
 | 0.75 | the same with one flaw: one candle leaning 10 to 25 degrees, or less than 12 mm deep but standing, or off the middle; or one candle snapped (a spare used) | as above |
 | 0.5 | two cupcakes as for full score | as above |
 | 0.25 | one cupcake as for full score | as above |
@@ -153,6 +154,16 @@ A candle counts in a cupcake while it is held by it (it went in and has neither 
 leans 25 degrees or less; two candles in one cupcake count for none; which candle goes into which cupcake does not
 matter. The score that counts is the one at the end. The run limit is 120 s (2,400 steps at 20 Hz): the full run
 (91.8 s) plus 30 %.
+
+**The squeeze on a real bench: a calibrated rim camera.** A camera on a fixed mount beyond the board at x 0.60,
+y -0.03, its lens about 45 mm over the bench, level with the cupcakes' rims, looks straight back towards the arms: it
+sees the three rims edge-on and both pads of the gripper that steadies a cupcake; the pushing hand works above the
+rims and the egg cup is off its line of sight. Before the trials a millimetre scale stood upright at the middle
+cupcake's place, in the rims' plane, is filmed to give the pixels per millimetre there (about 6 with a 1080p camera and
+a 30 cm wide view); the camera is not moved afterwards. The gap between the inner faces of the steadying gripper's pads
+is read frame by frame in millimetres, and a cupcake counts as squashed when that gap has fallen 4 mm or more under the
+gap at first touch on its rim: the same closing the simulation scores (`task.py`, `squeeze_on`: the pads' gap against
+the rim's width, 4 mm past touch).
 
 ## Checks
 
@@ -271,7 +282,7 @@ colour on the dark cupcakes, the spare as a red mark in the lump: where the cand
 | lean: 10 degrees for full score, 25 to count at all | a photo against a set square | 1.08, 2.50, 1.77 degrees | none | 9.9 and 10.1; 24.9 and 25.1; a candle fallen over (80 degrees) |
 | depth: 12 mm (51 mm showing) | a rule from the icing to the wick end | 20.2, 21.8, 23.9 mm | none | 12.1 and 11.9 mm; 9 mm standing: one flaw |
 | off the middle: 12 mm | a rule from above | 4.2, 2.8, 2.7 mm | none | 11.9 and 12.1 mm |
-| squashed: 4 mm of closing past touch (4 N) | a 32 mm block beside the cupcake (a squashed one is 29 mm) | at most 1.20, 1.21, 1.24 mm (0.76 to 0.80 N) | none | 3.9 and 4.1 mm of closing, through the step hook; two squashed: 0 |
+| squashed: 4 mm of closing past touch (4 N) | the rim camera's calibrated video: the pads' gap 4 mm or more under the gap at first touch | at most 1.20, 1.21, 1.24 mm (0.76 to 0.80 N) | none | 3.9 and 4.1 mm of closing, through the step hook; two squashed: 0 |
 | on the board, tilted less than 30 degrees | a photo | while pushed at most 0.05 mm and 0.96 degrees; at the end 0.04 mm, 0.01 degrees | none | 29 and 31 degrees; on its side: 0.5; two on their sides: 0; 2.5 cm past the board's edge: 0.5 |
 | snapped: a bending moment of 0.02 N m | the video | at most 0.0054, 0.0061, 0.0069 N m: 2.9 times under the limit (less than the threefold margin asked of a correct run; 0.02 is kept, above) | none | 0.0199 and 0.0201 N m, through the step hook; snapped with the spare in its place: 0.75 |
 | grippers clear: 6 cm from every cupcake's top, 7 cm from the lower end of every candle in one | the video | 73 mm (right hand) from the nearest top at the end | none | 59 and 61 mm over a top; 69 and 71 mm beside a candle's lower end |
@@ -319,6 +330,20 @@ left in the Play-Doh, an 8 mm candle fallen over or torn out; the straddles of t
 - The tip's entry is checked once per control step (20 Hz): a candle pushed fast may be 2.5 mm in before it is held.
 - The pushing hand's camera does not show a candle's lean; the holding hand's does.
 - The scripted run plans from the table's layout and does the seed-0 start (above, Scene).
+
+## Review of this submission (TK-3279XL)
+
+The review asked (Scoring, not met): "A 32 mm height block cannot establish whether the cupcake rim was squeezed 4 mm
+past first contact, and the claimed 6 mm height loss is unverified ... either specify a calibrated, unobstructed video
+measurement of that compression, or use a measurable permanent-deformation criterion in both real and simulated
+scoring."
+
+What changed: the first option. On a real bench the squeeze is read by the fixed, calibrated rim camera (Rules): the
+gap between the steadying gripper's pads against the gap at first touch on the rim, 4 mm or more of closing counting as
+squashed. That is the reading the simulation scores, so the bench and the simulation read the same thing. The 32 mm
+block and the 6 mm height loss are gone from the scoring; the squashed cupcake's shape stays only as a drawing, its
+size assumed and not scored. Unchanged: the instruction, the scene, the scorer, the run limit, the reference run
+`w7c-f4` and the model run `w7c-m1`.
 
 ## Earlier review of this idea
 
