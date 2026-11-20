@@ -1,0 +1,3482 @@
+{
+ "alphabet_soup_can_hope_robolab": {
+  "extent": 0.0712,
+  "file": "alphabet_soup_can.usd",
+  "height": 0.0836,
+  "high": [
+   0.0356,
+   0.033,
+   0.0418
+  ],
+  "low": [
+   -0.0356,
+   -0.033,
+   -0.0418
+  ],
+  "size": [
+   0.0712,
+   0.066,
+   0.0836
+  ]
+ },
+ "anza_medium_vomp_robolab": {
+  "extent": 0.634,
+  "file": "anza_medium.usd",
+  "height": 0.4941,
+  "high": [
+   0.317,
+   0.317,
+   0.4943
+  ],
+  "low": [
+   -0.317,
+   -0.317,
+   0.0002
+  ],
+  "size": [
+   0.634,
+   0.634,
+   0.4941
+  ]
+ },
+ "apple_01_objaverse_robolab": {
+  "extent": 0.8954,
+  "file": "apple_01.usd",
+  "height": 0.0965,
+  "high": [
+   0.4477,
+   0.4477,
+   0.0489
+  ],
+  "low": [
+   -0.4477,
+   -0.4477,
+   -0.0476
+  ],
+  "size": [
+   0.8954,
+   0.8954,
+   0.0965
+  ]
+ },
+ "apple_02_objaverse_robolab": {
+  "extent": 0.0754,
+  "file": "apple_02.usd",
+  "height": 0.0733,
+  "high": [
+   0.0353,
+   0.0375,
+   0.0219
+  ],
+  "low": [
+   -0.0349,
+   -0.0379,
+   -0.0514
+  ],
+  "size": [
+   0.0702,
+   0.0754,
+   0.0733
+  ]
+ },
+ "avocado01_fruits_veggies_robolab": {
+  "extent": 0.0611,
+  "file": "avocado01.usd",
+  "height": 0.092,
+  "high": [
+   0.0295,
+   0.0316,
+   0.0922
+  ],
+  "low": [
+   -0.0316,
+   -0.0291,
+   0.0002
+  ],
+  "size": [
+   0.0611,
+   0.0607,
+   0.092
+  ]
+ },
+ "bagel_00_objaverse_robolab": {
+  "extent": 0.1,
+  "file": "bagel_00.usd",
+  "height": 0.0312,
+  "high": [
+   0.05,
+   0.0474,
+   0.0156
+  ],
+  "low": [
+   -0.05,
+   -0.0474,
+   -0.0156
+  ],
+  "size": [
+   0.1,
+   0.0948,
+   0.0312
+  ]
+ },
+ "bagel_06_objaverse_robolab": {
+  "extent": 0.11,
+  "file": "bagel_06.usd",
+  "height": 0.031,
+  "high": [
+   0.0486,
+   0.055,
+   0.0155
+  ],
+  "low": [
+   -0.0486,
+   -0.055,
+   -0.0155
+  ],
+  "size": [
+   0.0972,
+   0.11,
+   0.031
+  ]
+ },
+ "bagel_07_objaverse_robolab": {
+  "extent": 0.11,
+  "file": "bagel_07.usd",
+  "height": 0.031,
+  "high": [
+   0.0486,
+   0.055,
+   0.0155
+  ],
+  "low": [
+   -0.0486,
+   -0.055,
+   -0.0155
+  ],
+  "size": [
+   0.0972,
+   0.11,
+   0.031
+  ]
+ },
+ "baguette_02_objaverse_robolab": {
+  "extent": 0.21,
+  "file": "baguette_02.usd",
+  "height": 0.037,
+  "high": [
+   0.105,
+   0.0319,
+   0.0185
+  ],
+  "low": [
+   -0.105,
+   -0.0319,
+   -0.0185
+  ],
+  "size": [
+   0.21,
+   0.0638,
+   0.037
+  ]
+ },
+ "banana_ycb_robolab": {
+  "extent": 0.1784,
+  "file": "banana.usd",
+  "height": 0.0366,
+  "high": [
+   0.0544,
+   0.0892,
+   0.0183
+  ],
+  "low": [
+   -0.0544,
+   -0.0892,
+   -0.0183
+  ],
+  "size": [
+   0.1088,
+   0.1784,
+   0.0366
+  ]
+ },
+ "bbq_sauce_bottle_hope_robolab": {
+  "extent": 0.0646,
+  "file": "bbq_sauce_bottle.usd",
+  "height": 0.1484,
+  "high": [
+   0.0217,
+   0.0323,
+   0.0742
+  ],
+  "low": [
+   -0.0217,
+   -0.0323,
+   -0.0742
+  ],
+  "size": [
+   0.0434,
+   0.0646,
+   0.1484
+  ]
+ },
+ "bbq_sauce_bottle_hot3d_robolab": {
+  "extent": 0.0644,
+  "file": "bbq_sauce_bottle.usd",
+  "height": 0.1453,
+  "high": [
+   0.0207,
+   0.0234,
+   0.1452
+  ],
+  "low": [
+   -0.0231,
+   -0.041,
+   -0.0001
+  ],
+  "size": [
+   0.0438,
+   0.0644,
+   0.1453
+  ]
+ },
+ "bin_a06_vomp_robolab": {
+  "extent": 0.5084,
+  "file": "bin_a06.usd",
+  "height": 0.187,
+  "high": [
+   0.2542,
+   0.15,
+   0.187
+  ],
+  "low": [
+   -0.2542,
+   -0.15,
+   -0.0
+  ],
+  "size": [
+   0.5084,
+   0.3,
+   0.187
+  ]
+ },
+ "bin_b03_vomp_robolab": {
+  "extent": 0.2312,
+  "file": "bin_b03.usd",
+  "height": 0.12,
+  "high": [
+   0.1156,
+   0.0701,
+   0.12
+  ],
+  "low": [
+   -0.1156,
+   -0.0701,
+   0.0
+  ],
+  "size": [
+   0.2312,
+   0.1402,
+   0.12
+  ]
+ },
+ "bin_b04_vomp_robolab": {
+  "extent": 0.3498,
+  "file": "bin_b04.usd",
+  "height": 0.1438,
+  "high": [
+   0.1749,
+   0.1,
+   0.1438
+  ],
+  "low": [
+   -0.1749,
+   -0.1,
+   0.0
+  ],
+  "size": [
+   0.3498,
+   0.2,
+   0.1438
+  ]
+ },
+ "birdhouse_hot3d_robolab": {
+  "extent": 0.1808,
+  "file": "birdhouse.usd",
+  "height": 0.2327,
+  "high": [
+   0.0777,
+   0.0901,
+   0.2327
+  ],
+  "low": [
+   -0.1022,
+   -0.0907,
+   -0.0
+  ],
+  "size": [
+   0.1799,
+   0.1808,
+   0.2327
+  ]
+ },
+ "black_hammer_robolab": {
+  "extent": 0.4088,
+  "file": "hammer_1.usd",
+  "height": 0.0362,
+  "high": [
+   0.2044,
+   0.0744,
+   0.0181
+  ],
+  "low": [
+   -0.2044,
+   -0.0744,
+   -0.0181
+  ],
+  "size": [
+   0.4088,
+   0.1488,
+   0.0362
+  ]
+ },
+ "blue_block_basic_robolab": {
+  "extent": 0.047,
+  "file": "blue_block.usd",
+  "height": 0.047,
+  "high": [
+   0.0235,
+   0.0235,
+   0.0235
+  ],
+  "low": [
+   -0.0235,
+   -0.0235,
+   -0.0235
+  ],
+  "size": [
+   0.047,
+   0.047,
+   0.047
+  ]
+ },
+ "blue_exhaust_pipe": {
+  "extent": 0.0624,
+  "file": "blue_exhaust_pipe.usd",
+  "height": 0.1809,
+  "high": [
+   0.0312,
+   0.0312,
+   0.1809
+  ],
+  "low": [
+   -0.0312,
+   -0.0311,
+   -0.0
+  ],
+  "size": [
+   0.0624,
+   0.0623,
+   0.1809
+  ]
+ },
+ "blue_hammer_robolab": {
+  "extent": 0.4052,
+  "file": "hammer_6.usd",
+  "height": 0.0348,
+  "high": [
+   0.2026,
+   0.0719,
+   0.0174
+  ],
+  "low": [
+   -0.2026,
+   -0.0719,
+   -0.0174
+  ],
+  "size": [
+   0.4052,
+   0.1438,
+   0.0348
+  ]
+ },
+ "blue_sorting_bin": {
+  "extent": 0.25,
+  "file": "blue_sorting_bin.usd",
+  "height": 0.0505,
+  "high": [
+   0.1002,
+   0.125,
+   0.0505
+  ],
+  "low": [
+   -0.1002,
+   -0.125,
+   -0.0
+  ],
+  "size": [
+   0.2004,
+   0.25,
+   0.0505
+  ]
+ },
+ "bowl_ycb_robolab": {
+  "extent": 0.1614,
+  "file": "bowl.usd",
+  "height": 0.055,
+  "high": [
+   0.0807,
+   0.0806,
+   0.0275
+  ],
+  "low": [
+   -0.0807,
+   -0.0806,
+   -0.0275
+  ],
+  "size": [
+   0.1614,
+   0.1612,
+   0.055
+  ]
+ },
+ "brick_ycb_robolab": {
+  "extent": 0.0778,
+  "file": "brick.usd",
+  "height": 0.0512,
+  "high": [
+   0.0263,
+   0.0389,
+   0.0256
+  ],
+  "low": [
+   -0.0263,
+   -0.0389,
+   -0.0256
+  ],
+  "size": [
+   0.0526,
+   0.0778,
+   0.0512
+  ]
+ },
+ "brown_box": {
+  "extent": 0.2,
+  "file": "brown_box.usd",
+  "height": 0.2,
+  "high": [
+   0.1,
+   0.1,
+   0.1
+  ],
+  "low": [
+   -0.1,
+   -0.1,
+   -0.1
+  ],
+  "size": [
+   0.2,
+   0.2,
+   0.2
+  ]
+ },
+ "bulb_new_polyhaven": {
+  "extent": 0.0614,
+  "file": "bulb_new.usda",
+  "height": 0.1003,
+  "high": [
+   0.0307,
+   0.0307,
+   0.0846
+  ],
+  "low": [
+   -0.0307,
+   -0.0307,
+   -0.0157
+  ],
+  "size": [
+   0.0614,
+   0.0614,
+   0.1003
+  ]
+ },
+ "bulb_old_polyhaven": {
+  "extent": 0.06,
+  "file": "bulb_old.usda",
+  "height": 0.1003,
+  "high": [
+   0.03,
+   0.03,
+   0.0834
+  ],
+  "low": [
+   -0.03,
+   -0.03,
+   -0.0169
+  ],
+  "size": [
+   0.06,
+   0.06,
+   0.1003
+  ]
+ },
+ "butter_hope_robolab": {
+  "extent": 0.1034,
+  "file": "butter.usd",
+  "height": 0.0528,
+  "high": [
+   0.012,
+   0.0517,
+   0.0264
+  ],
+  "low": [
+   -0.012,
+   -0.0517,
+   -0.0264
+  ],
+  "size": [
+   0.024,
+   0.1034,
+   0.0528
+  ]
+ },
+ "canned_mushrooms_hope_robolab": {
+  "extent": 0.0708,
+  "file": "canned_mushrooms.usd",
+  "height": 0.0334,
+  "high": [
+   0.0354,
+   0.0329,
+   0.0167
+  ],
+  "low": [
+   -0.0354,
+   -0.0329,
+   -0.0167
+  ],
+  "size": [
+   0.0708,
+   0.0658,
+   0.0334
+  ]
+ },
+ "canned_peaches_hope_robolab": {
+  "extent": 0.071,
+  "file": "canned_peaches.usd",
+  "height": 0.0578,
+  "high": [
+   0.0355,
+   0.033,
+   0.0289
+  ],
+  "low": [
+   -0.0355,
+   -0.033,
+   -0.0289
+  ],
+  "size": [
+   0.071,
+   0.066,
+   0.0578
+  ]
+ },
+ "canned_tuna_hope_robolab": {
+  "extent": 0.0708,
+  "file": "canned_tuna.usd",
+  "height": 0.0326,
+  "high": [
+   0.0354,
+   0.0329,
+   0.0163
+  ],
+  "low": [
+   -0.0354,
+   -0.0329,
+   -0.0163
+  ],
+  "size": [
+   0.0708,
+   0.0658,
+   0.0326
+  ]
+ },
+ "ceramic_mug_hot3d_robolab": {
+  "extent": 0.1272,
+  "file": "ceramic_mug.usd",
+  "height": 0.0841,
+  "high": [
+   0.0446,
+   0.0658,
+   0.0841
+  ],
+  "low": [
+   -0.0524,
+   -0.0614,
+   0.0
+  ],
+  "size": [
+   0.097,
+   0.1272,
+   0.0841
+  ]
+ },
+ "cheez_it_ycb_robolab": {
+  "extent": 0.164,
+  "file": "cheez_it.usd",
+  "height": 0.2134,
+  "high": [
+   0.0359,
+   0.082,
+   0.1067
+  ],
+  "low": [
+   -0.0359,
+   -0.082,
+   -0.1067
+  ],
+  "size": [
+   0.0718,
+   0.164,
+   0.2134
+  ]
+ },
+ "chocolate_pudding_mix_hope_robolab": {
+  "extent": 0.0834,
+  "file": "chocolate_pudding_mix.usd",
+  "height": 0.0494,
+  "high": [
+   0.015,
+   0.0417,
+   0.0247
+  ],
+  "low": [
+   -0.015,
+   -0.0417,
+   -0.0247
+  ],
+  "size": [
+   0.03,
+   0.0834,
+   0.0494
+  ]
+ },
+ "chocolate_pudding_ycb_robolab": {
+  "extent": 0.1378,
+  "file": "chocolate_pudding.usd",
+  "height": 0.0388,
+  "high": [
+   0.0689,
+   0.0644,
+   0.0194
+  ],
+  "low": [
+   -0.0689,
+   -0.0644,
+   -0.0194
+  ],
+  "size": [
+   0.1378,
+   0.1288,
+   0.0388
+  ]
+ },
+ "clamp_ycb_robolab": {
+  "extent": 0.1712,
+  "file": "clamp.usd",
+  "height": 0.0392,
+  "high": [
+   0.06,
+   0.0856,
+   0.0196
+  ],
+  "low": [
+   -0.06,
+   -0.0856,
+   -0.0196
+  ],
+  "size": [
+   0.12,
+   0.1712,
+   0.0392
+  ]
+ },
+ "clay_plates_hot3d_robolab": {
+  "extent": 0.3019,
+  "file": "clay_plates.usd",
+  "height": 0.0471,
+  "high": [
+   0.1375,
+   0.1696,
+   0.0473
+  ],
+  "low": [
+   -0.1631,
+   -0.1323,
+   0.0002
+  ],
+  "size": [
+   0.3006,
+   0.3019,
+   0.0471
+  ]
+ },
+ "coffee_can_ycb_robolab": {
+  "extent": 0.1024,
+  "file": "coffee_can.usd",
+  "height": 0.1402,
+  "high": [
+   0.0511,
+   0.0512,
+   0.0701
+  ],
+  "low": [
+   -0.0511,
+   -0.0512,
+   -0.0701
+  ],
+  "size": [
+   0.1022,
+   0.1024,
+   0.1402
+  ]
+ },
+ "coffee_pot_hot3d_robolab": {
+  "extent": 0.1457,
+  "file": "coffee_pot.usd",
+  "height": 0.1509,
+  "high": [
+   0.0798,
+   0.0428,
+   0.1509
+  ],
+  "low": [
+   -0.0659,
+   -0.0422,
+   0.0
+  ],
+  "size": [
+   0.1457,
+   0.085,
+   0.1509
+  ]
+ },
+ "computer_mouse_hot3d_robolab": {
+  "extent": 0.1099,
+  "file": "computer_mouse.usd",
+  "height": 0.0423,
+  "high": [
+   0.0341,
+   0.0556,
+   0.0214
+  ],
+  "low": [
+   -0.0358,
+   -0.0543,
+   -0.0209
+  ],
+  "size": [
+   0.0699,
+   0.1099,
+   0.0423
+  ]
+ },
+ "container_f24_vomp_robolab": {
+  "extent": 1.1584,
+  "file": "container_f24.usd",
+  "height": 0.67,
+  "high": [
+   0.5792,
+   0.3979,
+   0.67
+  ],
+  "low": [
+   -0.5792,
+   -0.3979,
+   0.0
+  ],
+  "size": [
+   1.1584,
+   0.7958,
+   0.67
+  ]
+ },
+ "cordless_drill_ycb_robolab": {
+  "extent": 0.1874,
+  "file": "cordless_drill.usd",
+  "height": 0.0574,
+  "high": [
+   0.0921,
+   0.0937,
+   0.0287
+  ],
+  "low": [
+   -0.0921,
+   -0.0937,
+   -0.0287
+  ],
+  "size": [
+   0.1842,
+   0.1874,
+   0.0574
+  ]
+ },
+ "corn_can_hope_robolab": {
+  "extent": 0.071,
+  "file": "corn_can.usd",
+  "height": 0.058,
+  "high": [
+   0.0355,
+   0.0331,
+   0.029
+  ],
+  "low": [
+   -0.0355,
+   -0.0331,
+   -0.029
+  ],
+  "size": [
+   0.071,
+   0.0662,
+   0.058
+  ]
+ },
+ "crabbypenholder_vomp_robolab": {
+  "extent": 0.0506,
+  "file": "crabbypenholder.usd",
+  "height": 0.0348,
+  "high": [
+   0.0253,
+   0.0151,
+   0.0348
+  ],
+  "low": [
+   -0.0253,
+   -0.0151,
+   0.0
+  ],
+  "size": [
+   0.0506,
+   0.0302,
+   0.0348
+  ]
+ },
+ "cream_cheese_hope_robolab": {
+  "extent": 0.1036,
+  "file": "cream_cheese.usd",
+  "height": 0.0532,
+  "high": [
+   0.0121,
+   0.0518,
+   0.0266
+  ],
+  "low": [
+   -0.0121,
+   -0.0518,
+   -0.0266
+  ],
+  "size": [
+   0.0242,
+   0.1036,
+   0.0532
+  ]
+ },
+ "dry_erase_marker_ycb_robolab": {
+  "extent": 0.1208,
+  "file": "dry_erase_marker.usd",
+  "height": 0.0188,
+  "high": [
+   0.0105,
+   0.0604,
+   0.0094
+  ],
+  "low": [
+   -0.0105,
+   -0.0604,
+   -0.0094
+  ],
+  "size": [
+   0.021,
+   0.1208,
+   0.0188
+  ]
+ },
+ "dumbbell_hot3d_robolab": {
+  "extent": 0.1802,
+  "file": "dumbbell.usd",
+  "height": 0.0744,
+  "high": [
+   0.0418,
+   0.0901,
+   0.0372
+  ],
+  "low": [
+   -0.0418,
+   -0.0901,
+   -0.0372
+  ],
+  "size": [
+   0.0836,
+   0.1802,
+   0.0744
+  ]
+ },
+ "foam_roller_hot3d_robolab": {
+  "extent": 0.1473,
+  "file": "foam_roller.usd",
+  "height": 0.0365,
+  "high": [
+   0.0244,
+   0.0735,
+   0.0365
+  ],
+  "low": [
+   -0.0435,
+   -0.0738,
+   -0.0
+  ],
+  "size": [
+   0.0679,
+   0.1473,
+   0.0365
+  ]
+ },
+ "fork_big_vomp_robolab": {
+  "extent": 0.184,
+  "file": "fork_big.usd",
+  "height": 0.0133,
+  "high": [
+   0.092,
+   0.0125,
+   0.013
+  ],
+  "low": [
+   -0.092,
+   -0.0125,
+   -0.0003
+  ],
+  "size": [
+   0.184,
+   0.025,
+   0.0133
+  ]
+ },
+ "fork_small_vomp_robolab": {
+  "extent": 0.1626,
+  "file": "fork_small.usd",
+  "height": 0.0132,
+  "high": [
+   0.0917,
+   0.0142,
+   0.0133
+  ],
+  "low": [
+   -0.0709,
+   -0.0144,
+   0.0001
+  ],
+  "size": [
+   0.1626,
+   0.0286,
+   0.0132
+  ]
+ },
+ "frozen_vegetable_block_hot3d_robolab": {
+  "extent": 0.0967,
+  "file": "frozen_vegetable_block.usd",
+  "height": 0.0204,
+  "high": [
+   0.0226,
+   0.0491,
+   0.0204
+  ],
+  "low": [
+   -0.0447,
+   -0.0476,
+   0.0
+  ],
+  "size": [
+   0.0673,
+   0.0967,
+   0.0204
+  ]
+ },
+ "frozen_waffles_hot3d_robolab": {
+  "extent": 0.1301,
+  "file": "frozen_waffles.usd",
+  "height": 0.0206,
+  "high": [
+   0.022,
+   0.0621,
+   0.0206
+  ],
+  "low": [
+   -0.0482,
+   -0.068,
+   0.0
+  ],
+  "size": [
+   0.0702,
+   0.1301,
+   0.0206
+  ]
+ },
+ "gear_base": {
+  "extent": 0.15,
+  "file": "factory_gear_base.usd",
+  "height": 0.025,
+  "high": [
+   0.075,
+   0.0375,
+   0.025
+  ],
+  "low": [
+   -0.075,
+   -0.0375,
+   0.0
+  ],
+  "size": [
+   0.15,
+   0.075,
+   0.025
+  ]
+ },
+ "glasses_hot3d_robolab": {
+  "extent": 0.1639,
+  "file": "glasses.usd",
+  "height": 0.0459,
+  "high": [
+   0.0734,
+   0.141,
+   0.0154
+  ],
+  "low": [
+   -0.0734,
+   -0.0229,
+   -0.0305
+  ],
+  "size": [
+   0.1468,
+   0.1639,
+   0.0459
+  ]
+ },
+ "granola_bars_hope_robolab": {
+  "extent": 0.1654,
+  "file": "granola_bars.usd",
+  "height": 0.124,
+  "high": [
+   0.0194,
+   0.0827,
+   0.062
+  ],
+  "low": [
+   -0.0194,
+   -0.0827,
+   -0.062
+  ],
+  "size": [
+   0.0388,
+   0.1654,
+   0.124
+  ]
+ },
+ "green_beans_can_hope_robolab": {
+  "extent": 0.0706,
+  "file": "green_beans_can.usd",
+  "height": 0.0576,
+  "high": [
+   0.0353,
+   0.0329,
+   0.0288
+  ],
+  "low": [
+   -0.0353,
+   -0.0329,
+   -0.0288
+  ],
+  "size": [
+   0.0706,
+   0.0658,
+   0.0576
+  ]
+ },
+ "green_block_basic_robolab": {
+  "extent": 0.047,
+  "file": "green_block.usd",
+  "height": 0.047,
+  "high": [
+   0.0235,
+   0.0235,
+   0.0235
+  ],
+  "low": [
+   -0.0235,
+   -0.0235,
+   -0.0235
+  ],
+  "size": [
+   0.047,
+   0.047,
+   0.047
+  ]
+ },
+ "green_container": {
+  "extent": 0.615,
+  "file": "container_h20_green.usd",
+  "height": 0.0903,
+  "high": [
+   0.3075,
+   0.2075,
+   0.0903
+  ],
+  "low": [
+   -0.3075,
+   -0.2075,
+   -0.0
+  ],
+  "size": [
+   0.615,
+   0.415,
+   0.0903
+  ]
+ },
+ "grey_bin_robolab": {
+  "extent": 0.42,
+  "file": "grey_bin.usd",
+  "height": 0.105,
+  "high": [
+   0.21,
+   0.14,
+   0.105
+  ],
+  "low": [
+   -0.21,
+   -0.14,
+   -0.0
+  ],
+  "size": [
+   0.42,
+   0.28,
+   0.105
+  ]
+ },
+ "h06_button_pair": {
+  "extent": 0.026,
+  "file": "button_pair.usda",
+  "height": 0.0802,
+  "high": [
+   0.013,
+   0.013,
+   0.0802
+  ],
+  "low": [
+   -0.013,
+   -0.013,
+   0.0
+  ],
+  "size": [
+   0.026,
+   0.026,
+   0.0802
+  ]
+ },
+ "h06_button_play": {
+  "extent": 0.026,
+  "file": "button_play.usda",
+  "height": 0.0802,
+  "high": [
+   0.013,
+   0.013,
+   0.0802
+  ],
+  "low": [
+   -0.013,
+   -0.013,
+   0.0
+  ],
+  "size": [
+   0.026,
+   0.026,
+   0.0802
+  ]
+ },
+ "h06_button_power": {
+  "extent": 0.026,
+  "file": "button_power.usda",
+  "height": 0.0802,
+  "high": [
+   0.013,
+   0.013,
+   0.0802
+  ],
+  "low": [
+   -0.013,
+   -0.013,
+   0.0
+  ],
+  "size": [
+   0.026,
+   0.026,
+   0.0802
+  ]
+ },
+ "h06_phone": {
+  "extent": 0.164,
+  "file": "phone.usda",
+  "height": 0.0093,
+  "high": [
+   0.082,
+   0.039,
+   0.0093
+  ],
+  "low": [
+   -0.082,
+   -0.039,
+   0.0
+  ],
+  "size": [
+   0.164,
+   0.078,
+   0.0093
+  ]
+ },
+ "h06_speaker": {
+  "extent": 0.2,
+  "file": "speaker.usda",
+  "height": 0.0724,
+  "high": [
+   0.05,
+   0.1,
+   0.0724
+  ],
+  "low": [
+   -0.0504,
+   -0.1,
+   0.0
+  ],
+  "size": [
+   0.1004,
+   0.2,
+   0.0724
+  ]
+ },
+ "hammer_4_handal_robolab": {
+  "extent": 0.3308,
+  "file": "hammer_4.usd",
+  "height": 0.0334,
+  "high": [
+   0.1654,
+   0.064,
+   0.0167
+  ],
+  "low": [
+   -0.1654,
+   -0.064,
+   -0.0167
+  ],
+  "size": [
+   0.3308,
+   0.128,
+   0.0334
+  ]
+ },
+ "hammer_5_handal_robolab": {
+  "extent": 0.3366,
+  "file": "hammer_5.usd",
+  "height": 0.0344,
+  "high": [
+   0.1683,
+   0.0634,
+   0.0172
+  ],
+  "low": [
+   -0.1683,
+   -0.0634,
+   -0.0172
+  ],
+  "size": [
+   0.3366,
+   0.1268,
+   0.0344
+  ]
+ },
+ "hammer_7_handal_robolab": {
+  "extent": 0.3588,
+  "file": "hammer_7.usd",
+  "height": 0.0366,
+  "high": [
+   0.1794,
+   0.0744,
+   0.0183
+  ],
+  "low": [
+   -0.1794,
+   -0.0744,
+   -0.0183
+  ],
+  "size": [
+   0.3588,
+   0.1488,
+   0.0366
+  ]
+ },
+ "hammer_8_handal_robolab": {
+  "extent": 0.3346,
+  "file": "hammer_8.usd",
+  "height": 0.0348,
+  "high": [
+   0.1673,
+   0.0731,
+   0.0174
+  ],
+  "low": [
+   -0.1673,
+   -0.0731,
+   -0.0174
+  ],
+  "size": [
+   0.3346,
+   0.1462,
+   0.0348
+  ]
+ },
+ "hammer_handal_robolab": {
+  "extent": 0.4104,
+  "file": "hammer.usd",
+  "height": 0.0384,
+  "high": [
+   0.2052,
+   0.073,
+   0.0192
+  ],
+  "low": [
+   -0.2052,
+   -0.073,
+   -0.0192
+  ],
+  "size": [
+   0.4104,
+   0.146,
+   0.0384
+  ]
+ },
+ "hole": {
+  "extent": 0.0004,
+  "file": "factory_hole_8mm.usd",
+  "height": 0.0003,
+  "high": [
+   0.0002,
+   0.0002,
+   0.0003
+  ],
+  "low": [
+   -0.0002,
+   -0.0002,
+   -0.0
+  ],
+  "size": [
+   0.0004,
+   0.0004,
+   0.0003
+  ]
+ },
+ "jello_ycb_robolab": {
+  "extent": 0.1012,
+  "file": "jello.usd",
+  "height": 0.0302,
+  "high": [
+   0.0447,
+   0.0506,
+   0.0151
+  ],
+  "low": [
+   -0.0447,
+   -0.0506,
+   -0.0151
+  ],
+  "size": [
+   0.0894,
+   0.1012,
+   0.0302
+  ]
+ },
+ "ketchup_bottle_hope_robolab": {
+  "extent": 0.0646,
+  "file": "ketchup_bottle.usd",
+  "height": 0.1486,
+  "high": [
+   0.0217,
+   0.0323,
+   0.0743
+  ],
+  "low": [
+   -0.0217,
+   -0.0323,
+   -0.0743
+  ],
+  "size": [
+   0.0434,
+   0.0646,
+   0.1486
+  ]
+ },
+ "keyboard_hot3d_robolab": {
+  "extent": 0.429,
+  "file": "keyboard.usd",
+  "height": 0.0203,
+  "high": [
+   0.2145,
+   0.0633,
+   0.002
+  ],
+  "low": [
+   -0.2145,
+   -0.0657,
+   -0.0183
+  ],
+  "size": [
+   0.429,
+   0.129,
+   0.0203
+  ]
+ },
+ "kinematic_bowl_ycb_robolab": {
+  "extent": 0.1614,
+  "file": "bowl.usd",
+  "height": 0.055,
+  "high": [
+   0.0807,
+   0.0806,
+   0.0275
+  ],
+  "low": [
+   -0.0807,
+   -0.0806,
+   -0.0275
+  ],
+  "size": [
+   0.1614,
+   0.1612,
+   0.055
+  ]
+ },
+ "l02_controller": {
+  "extent": 0.5,
+  "file": "controller.usda",
+  "height": 0.0207,
+  "high": [
+   0.12,
+   0.25,
+   0.0207
+  ],
+  "low": [
+   -0.12,
+   -0.25,
+   0.0
+  ],
+  "size": [
+   0.24,
+   0.5,
+   0.0207
+  ]
+ },
+ "l02_play_button": {
+  "extent": 0.035,
+  "file": "play_button.usda",
+  "height": 0.0322,
+  "high": [
+   0.0175,
+   0.0175,
+   0.0322
+  ],
+  "low": [
+   -0.0175,
+   -0.0175,
+   0.0
+  ],
+  "size": [
+   0.035,
+   0.035,
+   0.0322
+  ]
+ },
+ "ladle_handal_robolab": {
+  "extent": 0.32,
+  "file": "ladle.usd",
+  "height": 0.0622,
+  "high": [
+   0.16,
+   0.039,
+   0.0311
+  ],
+  "low": [
+   -0.16,
+   -0.039,
+   -0.0311
+  ],
+  "size": [
+   0.32,
+   0.078,
+   0.0622
+  ]
+ },
+ "lamp_socket_polyhaven": {
+  "extent": 0.1102,
+  "file": "lamp_socket.usda",
+  "height": 0.0506,
+  "high": [
+   0.0551,
+   0.0551,
+   0.0506
+  ],
+  "low": [
+   -0.0551,
+   -0.0551,
+   0.0
+  ],
+  "size": [
+   0.1102,
+   0.1102,
+   0.0506
+  ]
+ },
+ "large_gear": {
+  "extent": 0.062,
+  "file": "factory_gear_large.usd",
+  "height": 0.025,
+  "high": [
+   0.0007,
+   0.031,
+   0.03
+  ],
+  "low": [
+   -0.0612,
+   -0.031,
+   0.005
+  ],
+  "size": [
+   0.0619,
+   0.062,
+   0.025
+  ]
+ },
+ "lemon_01_fruits_veggies_robolab": {
+  "extent": 0.0762,
+  "file": "lemon_01.usd",
+  "height": 0.0507,
+  "high": [
+   0.0381,
+   0.0248,
+   0.0518
+  ],
+  "low": [
+   -0.0381,
+   -0.0248,
+   0.0011
+  ],
+  "size": [
+   0.0762,
+   0.0496,
+   0.0507
+  ]
+ },
+ "lemon_02_fruits_veggies_robolab": {
+  "extent": 0.0604,
+  "file": "lemon_02.usd",
+  "height": 0.0396,
+  "high": [
+   0.0302,
+   0.0201,
+   0.0397
+  ],
+  "low": [
+   -0.0302,
+   -0.0196,
+   0.0001
+  ],
+  "size": [
+   0.0604,
+   0.0397,
+   0.0396
+  ]
+ },
+ "lime01_fruits_veggies_robolab": {
+  "extent": 0.0755,
+  "file": "lime01.usd",
+  "height": 0.06,
+  "high": [
+   0.0377,
+   0.033,
+   0.0598
+  ],
+  "low": [
+   -0.0378,
+   -0.0283,
+   -0.0002
+  ],
+  "size": [
+   0.0755,
+   0.0613,
+   0.06
+  ]
+ },
+ "lizard_figurine_hot3d_robolab": {
+  "extent": 0.2397,
+  "file": "lizard_figurine.usd",
+  "height": 0.1353,
+  "high": [
+   0.0924,
+   0.0825,
+   0.1351
+  ],
+  "low": [
+   -0.1473,
+   -0.0574,
+   -0.0002
+  ],
+  "size": [
+   0.2397,
+   0.1399,
+   0.1353
+  ]
+ },
+ "lunchbag_objaverse_robolab": {
+  "extent": 0.0994,
+  "file": "lunchbag.usd",
+  "height": 0.145,
+  "high": [
+   0.0497,
+   0.0262,
+   0.0725
+  ],
+  "low": [
+   -0.0497,
+   -0.0262,
+   -0.0725
+  ],
+  "size": [
+   0.0994,
+   0.0524,
+   0.145
+  ]
+ },
+ "lychee01_fruits_veggies_robolab": {
+  "extent": 0.0415,
+  "file": "lychee01.usd",
+  "height": 0.0502,
+  "high": [
+   0.0186,
+   0.0187,
+   0.0499
+  ],
+  "low": [
+   -0.0218,
+   -0.0228,
+   -0.0003
+  ],
+  "size": [
+   0.0404,
+   0.0415,
+   0.0502
+  ]
+ },
+ "macaroni_and_cheese_hope_robolab": {
+  "extent": 0.1236,
+  "file": "macaroni_and_cheese.usd",
+  "height": 0.1662,
+  "high": [
+   0.0201,
+   0.0618,
+   0.0831
+  ],
+  "low": [
+   -0.0201,
+   -0.0618,
+   -0.0831
+  ],
+  "size": [
+   0.0402,
+   0.1236,
+   0.1662
+  ]
+ },
+ "marker_hot3d_robolab": {
+  "extent": 0.1206,
+  "file": "marker.usd",
+  "height": 0.0197,
+  "high": [
+   0.0089,
+   0.1206,
+   0.0108
+  ],
+  "low": [
+   -0.0103,
+   0.0,
+   -0.0089
+  ],
+  "size": [
+   0.0192,
+   0.1206,
+   0.0197
+  ]
+ },
+ "mayonnaise_bottle_hope_robolab": {
+  "extent": 0.0646,
+  "file": "mayonnaise_bottle.usd",
+  "height": 0.148,
+  "high": [
+   0.0205,
+   0.0323,
+   0.074
+  ],
+  "low": [
+   -0.0205,
+   -0.0323,
+   -0.074
+  ],
+  "size": [
+   0.041,
+   0.0646,
+   0.148
+  ]
+ },
+ "measuring_cups_1_handal_robolab": {
+  "extent": 0.1734,
+  "file": "measuring_cups_1.usd",
+  "height": 0.052,
+  "high": [
+   0.0867,
+   0.0476,
+   0.026
+  ],
+  "low": [
+   -0.0867,
+   -0.0476,
+   -0.026
+  ],
+  "size": [
+   0.1734,
+   0.0952,
+   0.052
+  ]
+ },
+ "measuring_cups_handal_robolab": {
+  "extent": 0.1674,
+  "file": "measuring_cups.usd",
+  "height": 0.0378,
+  "high": [
+   0.0837,
+   0.0414,
+   0.0189
+  ],
+  "low": [
+   -0.0837,
+   -0.0414,
+   -0.0189
+  ],
+  "size": [
+   0.1674,
+   0.0828,
+   0.0378
+  ]
+ },
+ "measuring_spoon_handal_robolab": {
+  "extent": 0.1564,
+  "file": "measuring_spoon.usd",
+  "height": 0.0286,
+  "high": [
+   0.0782,
+   0.0309,
+   0.0143
+  ],
+  "low": [
+   -0.0782,
+   -0.0309,
+   -0.0143
+  ],
+  "size": [
+   0.1564,
+   0.0618,
+   0.0286
+  ]
+ },
+ "medium_gear": {
+  "extent": 0.042,
+  "file": "factory_gear_medium.usd",
+  "height": 0.025,
+  "high": [
+   0.0412,
+   0.021,
+   0.03
+  ],
+  "low": [
+   -0.0007,
+   -0.021,
+   0.005
+  ],
+  "size": [
+   0.0419,
+   0.042,
+   0.025
+  ]
+ },
+ "megaphone_hot3d_robolab": {
+  "extent": 0.1603,
+  "file": "megaphone.usd",
+  "height": 0.3012,
+  "high": [
+   0.0688,
+   0.1041,
+   0.3012
+  ],
+  "low": [
+   -0.051,
+   -0.0562,
+   0.0
+  ],
+  "size": [
+   0.1198,
+   0.1603,
+   0.3012
+  ]
+ },
+ "milk_carton_hope_robolab": {
+  "extent": 0.0732,
+  "file": "milk_carton.usd",
+  "height": 0.1904,
+  "high": [
+   0.0366,
+   0.0361,
+   0.0952
+  ],
+  "low": [
+   -0.0366,
+   -0.0361,
+   -0.0952
+  ],
+  "size": [
+   0.0732,
+   0.0722,
+   0.1904
+  ]
+ },
+ "milk_carton_hot3d_robolab": {
+  "extent": 0.0726,
+  "file": "milk_carton.usd",
+  "height": 0.1917,
+  "high": [
+   0.0334,
+   0.0353,
+   0.1916
+  ],
+  "low": [
+   -0.039,
+   -0.0373,
+   -0.0001
+  ],
+  "size": [
+   0.0724,
+   0.0726,
+   0.1917
+  ]
+ },
+ "milkjug_a01_vomp_robolab": {
+  "extent": 0.0768,
+  "file": "milkjug_a01.usd",
+  "height": 0.1724,
+  "high": [
+   0.0384,
+   0.0383,
+   0.1724
+  ],
+  "low": [
+   -0.0384,
+   -0.0383,
+   0.0
+  ],
+  "size": [
+   0.0768,
+   0.0766,
+   0.1724
+  ]
+ },
+ "mug": {
+  "extent": 0.0011,
+  "file": "mug.usd",
+  "height": 0.0011,
+  "high": [
+   0.0007,
+   0.0009,
+   0.0006
+  ],
+  "low": [
+   -0.0004,
+   0.0,
+   -0.0005
+  ],
+  "size": [
+   0.0011,
+   0.0009,
+   0.0011
+  ]
+ },
+ "mug_hot3d_robolab": {
+  "extent": 0.1162,
+  "file": "mug.usd",
+  "height": 0.0916,
+  "high": [
+   0.0486,
+   0.043,
+   0.0914
+  ],
+  "low": [
+   -0.0676,
+   -0.0478,
+   -0.0002
+  ],
+  "size": [
+   0.1162,
+   0.0908,
+   0.0916
+  ]
+ },
+ "mug_ycb_robolab": {
+  "extent": 0.117,
+  "file": "mug.usd",
+  "height": 0.0814,
+  "high": [
+   0.0585,
+   0.0465,
+   0.0407
+  ],
+  "low": [
+   -0.0585,
+   -0.0465,
+   -0.0407
+  ],
+  "size": [
+   0.117,
+   0.093,
+   0.0814
+  ]
+ },
+ "mustard_bottle_hope_robolab": {
+  "extent": 0.0652,
+  "file": "mustard_bottle.usd",
+  "height": 0.16,
+  "high": [
+   0.0243,
+   0.0326,
+   0.08
+  ],
+  "low": [
+   -0.0243,
+   -0.0326,
+   -0.08
+  ],
+  "size": [
+   0.0486,
+   0.0652,
+   0.16
+  ]
+ },
+ "mustard_bottle_hot3d_robolab": {
+  "extent": 0.0656,
+  "file": "mustard_bottle.usd",
+  "height": 0.149,
+  "high": [
+   0.0179,
+   0.0321,
+   0.1489
+  ],
+  "low": [
+   -0.0302,
+   -0.0335,
+   -0.0001
+  ],
+  "size": [
+   0.0481,
+   0.0656,
+   0.149
+  ]
+ },
+ "mustard_ycb_robolab": {
+  "extent": 0.0972,
+  "file": "mustard.usd",
+  "height": 0.1914,
+  "high": [
+   0.0486,
+   0.0333,
+   0.0957
+  ],
+  "low": [
+   -0.0486,
+   -0.0333,
+   -0.0957
+  ],
+  "size": [
+   0.0972,
+   0.0666,
+   0.1914
+  ]
+ },
+ "oatmeal_raisin_cookies_hope_robolab": {
+  "extent": 0.1228,
+  "file": "oatmeal_raisin_cookies.usd",
+  "height": 0.1672,
+  "high": [
+   0.0201,
+   0.0614,
+   0.0836
+  ],
+  "low": [
+   -0.0201,
+   -0.0614,
+   -0.0836
+  ],
+  "size": [
+   0.0402,
+   0.1228,
+   0.1672
+  ]
+ },
+ "office_table": {
+  "extent": 1.802,
+  "file": "table.usd",
+  "height": 0.7581,
+  "high": [
+   0.901,
+   0.401,
+   0.7581
+  ],
+  "low": [
+   -0.901,
+   -0.401,
+   -0.0
+  ],
+  "size": [
+   1.802,
+   0.802,
+   0.7581
+  ]
+ },
+ "orange_01_fruits_veggies_robolab": {
+  "extent": 0.0724,
+  "file": "orange_01.usd",
+  "height": 0.0832,
+  "high": [
+   0.0362,
+   0.0362,
+   0.0833
+  ],
+  "low": [
+   -0.0362,
+   -0.0362,
+   0.0001
+  ],
+  "size": [
+   0.0724,
+   0.0724,
+   0.0832
+  ]
+ },
+ "orange_02_fruits_veggies_robolab": {
+  "extent": 0.0718,
+  "file": "orange_02.usd",
+  "height": 0.0736,
+  "high": [
+   0.0359,
+   0.0359,
+   0.0735
+  ],
+  "low": [
+   -0.0359,
+   -0.0359,
+   -0.0001
+  ],
+  "size": [
+   0.0718,
+   0.0718,
+   0.0736
+  ]
+ },
+ "orange_juice_carton_hope_robolab": {
+  "extent": 0.0728,
+  "file": "orange_juice_carton.usd",
+  "height": 0.1924,
+  "high": [
+   0.0364,
+   0.0358,
+   0.0962
+  ],
+  "low": [
+   -0.0364,
+   -0.0358,
+   -0.0962
+  ],
+  "size": [
+   0.0728,
+   0.0716,
+   0.1924
+  ]
+ },
+ "orange_juice_carton_hot3d_robolab": {
+  "extent": 0.0751,
+  "file": "orange_juice_carton.usd",
+  "height": 0.192,
+  "high": [
+   0.043,
+   0.0329,
+   0.1917
+  ],
+  "low": [
+   -0.0321,
+   -0.041,
+   -0.0003
+  ],
+  "size": [
+   0.0751,
+   0.0739,
+   0.192
+  ]
+ },
+ "parmesan_cheese_canister_hope_robolab": {
+  "extent": 0.0712,
+  "file": "parmesan_cheese_canister.usd",
+  "height": 0.1028,
+  "high": [
+   0.033,
+   0.0356,
+   0.0514
+  ],
+  "low": [
+   -0.033,
+   -0.0356,
+   -0.0514
+  ],
+  "size": [
+   0.066,
+   0.0712,
+   0.1028
+  ]
+ },
+ "parmesan_cheese_canister_hot3d_robolab": {
+  "extent": 0.0711,
+  "file": "parmesan_cheese_canister.usd",
+  "height": 0.1023,
+  "high": [
+   0.0354,
+   0.0387,
+   0.1022
+  ],
+  "low": [
+   -0.0309,
+   -0.0324,
+   -0.0001
+  ],
+  "size": [
+   0.0663,
+   0.0711,
+   0.1023
+  ]
+ },
+ "peas_and_carrots_hope_robolab": {
+  "extent": 0.0706,
+  "file": "peas_and_carrots.usd",
+  "height": 0.0586,
+  "high": [
+   0.0353,
+   0.033,
+   0.0293
+  ],
+  "low": [
+   -0.0353,
+   -0.033,
+   -0.0293
+  ],
+  "size": [
+   0.0706,
+   0.066,
+   0.0586
+  ]
+ },
+ "peg": {
+  "extent": 0.0,
+  "file": "factory_peg_8mm.usd",
+  "height": 0.0005,
+  "high": [
+   0.0,
+   0.0,
+   0.0005
+  ],
+  "low": [
+   -0.0,
+   -0.0,
+   0.0
+  ],
+  "size": [
+   0.0,
+   0.0,
+   0.0005
+  ]
+ },
+ "pineapple_slices_can_hope_robolab": {
+  "extent": 0.0696,
+  "file": "pineapple_slices_can.usd",
+  "height": 0.0576,
+  "high": [
+   0.0348,
+   0.0328,
+   0.0288
+  ],
+  "low": [
+   -0.0348,
+   -0.0328,
+   -0.0288
+  ],
+  "size": [
+   0.0696,
+   0.0656,
+   0.0576
+  ]
+ },
+ "pitcher_hot3d_robolab": {
+  "extent": 0.1358,
+  "file": "pitcher.usd",
+  "height": 0.1674,
+  "high": [
+   0.0518,
+   0.0517,
+   0.1677
+  ],
+  "low": [
+   -0.084,
+   -0.048,
+   0.0003
+  ],
+  "size": [
+   0.1358,
+   0.0997,
+   0.1674
+  ]
+ },
+ "pitcher_ycb_robolab": {
+  "extent": 0.149,
+  "file": "pitcher.usd",
+  "height": 0.2426,
+  "high": [
+   0.0745,
+   0.0724,
+   0.1213
+  ],
+  "low": [
+   -0.0745,
+   -0.0724,
+   -0.1213
+  ],
+  "size": [
+   0.149,
+   0.1448,
+   0.2426
+  ]
+ },
+ "pitted_cherries_hope_robolab": {
+  "extent": 0.0712,
+  "file": "pitted_cherries.usd",
+  "height": 0.0582,
+  "high": [
+   0.0356,
+   0.0331,
+   0.0291
+  ],
+  "low": [
+   -0.0356,
+   -0.0331,
+   -0.0291
+  ],
+  "size": [
+   0.0712,
+   0.0662,
+   0.0582
+  ]
+ },
+ "plasticpail_a02_vomp_robolab": {
+  "extent": 0.196,
+  "file": "plasticpail_a02.usd",
+  "height": 0.2,
+  "high": [
+   0.098,
+   0.0922,
+   0.2
+  ],
+  "low": [
+   -0.098,
+   -0.0922,
+   0.0
+  ],
+  "size": [
+   0.196,
+   0.1844,
+   0.2
+  ]
+ },
+ "plate_large_vomp_robolab": {
+  "extent": 0.3308,
+  "file": "plate_large.usd",
+  "height": 0.0258,
+  "high": [
+   0.1654,
+   0.1654,
+   0.0286
+  ],
+  "low": [
+   -0.1654,
+   -0.1654,
+   0.0028
+  ],
+  "size": [
+   0.3308,
+   0.3308,
+   0.0258
+  ]
+ },
+ "plate_small_vomp_robolab": {
+  "extent": 0.2976,
+  "file": "plate_small.usd",
+  "height": 0.0211,
+  "high": [
+   0.1488,
+   0.1488,
+   0.0212
+  ],
+  "low": [
+   -0.1488,
+   -0.1488,
+   0.0001
+  ],
+  "size": [
+   0.2976,
+   0.2976,
+   0.0211
+  ]
+ },
+ "pomegranate01_fruits_veggies_robolab": {
+  "extent": 0.1153,
+  "file": "pomegranate01.usd",
+  "height": 0.1149,
+  "high": [
+   0.0544,
+   0.0578,
+   0.1147
+  ],
+  "low": [
+   -0.0598,
+   -0.0575,
+   -0.0002
+  ],
+  "size": [
+   0.1142,
+   0.1153,
+   0.1149
+  ]
+ },
+ "popcorn_box_hope_robolab": {
+  "extent": 0.1264,
+  "file": "popcorn_box.usd",
+  "height": 0.085,
+  "high": [
+   0.0191,
+   0.0632,
+   0.0425
+  ],
+  "low": [
+   -0.0191,
+   -0.0632,
+   -0.0425
+  ],
+  "size": [
+   0.0382,
+   0.1264,
+   0.085
+  ]
+ },
+ "potato_masher_hot3d_robolab": {
+  "extent": 0.0902,
+  "file": "potato_masher.usd",
+  "height": 0.283,
+  "high": [
+   0.03,
+   0.0472,
+   0.2826
+  ],
+  "low": [
+   -0.06,
+   -0.043,
+   -0.0004
+  ],
+  "size": [
+   0.09,
+   0.0902,
+   0.283
+  ]
+ },
+ "power_drill": {
+  "extent": 0.1868,
+  "file": "power_drill_physics.usd",
+  "height": 0.0572,
+  "high": [
+   0.0922,
+   0.0934,
+   0.0286
+  ],
+  "low": [
+   -0.0922,
+   -0.0934,
+   -0.0286
+  ],
+  "size": [
+   0.1844,
+   0.1868,
+   0.0572
+  ]
+ },
+ "pumpkinlarge_vomp_robolab": {
+  "extent": 0.0902,
+  "file": "pumpkinlarge.usd",
+  "height": 0.0891,
+  "high": [
+   0.0445,
+   0.0451,
+   0.0893
+  ],
+  "low": [
+   -0.0445,
+   -0.0451,
+   0.0002
+  ],
+  "size": [
+   0.089,
+   0.0902,
+   0.0891
+  ]
+ },
+ "pumpkinsmall_vomp_robolab": {
+  "extent": 0.076,
+  "file": "pumpkinsmall.usd",
+  "height": 0.0751,
+  "high": [
+   0.038,
+   0.0376,
+   0.0754
+  ],
+  "low": [
+   -0.038,
+   -0.0384,
+   0.0003
+  ],
+  "size": [
+   0.076,
+   0.076,
+   0.0751
+  ]
+ },
+ "rack_l04_vomp_robolab": {
+  "extent": 1.6,
+  "file": "rack_l04.usd",
+  "height": 2.5,
+  "high": [
+   0.35,
+   0.8,
+   2.5
+  ],
+  "low": [
+   -0.35,
+   -0.8,
+   0.0
+  ],
+  "size": [
+   0.7,
+   1.6,
+   2.5
+  ]
+ },
+ "raisin_box_hope_robolab": {
+  "extent": 0.0858,
+  "file": "raisin_box.usd",
+  "height": 0.1232,
+  "high": [
+   0.0199,
+   0.0429,
+   0.0616
+  ],
+  "low": [
+   -0.0199,
+   -0.0429,
+   -0.0616
+  ],
+  "size": [
+   0.0398,
+   0.0858,
+   0.1232
+  ]
+ },
+ "ranch_dressing_hope_robolab": {
+  "extent": 0.064,
+  "file": "ranch_dressing.usd",
+  "height": 0.1474,
+  "high": [
+   0.0218,
+   0.032,
+   0.0737
+  ],
+  "low": [
+   -0.0218,
+   -0.032,
+   -0.0737
+  ],
+  "size": [
+   0.0436,
+   0.064,
+   0.1474
+  ]
+ },
+ "red_bell_pepper_objaverse_robolab": {
+  "extent": 0.0858,
+  "file": "red_bell_pepper.usd",
+  "height": 0.09,
+  "high": [
+   0.041,
+   0.0429,
+   0.045
+  ],
+  "low": [
+   -0.041,
+   -0.0429,
+   -0.045
+  ],
+  "size": [
+   0.082,
+   0.0858,
+   0.09
+  ]
+ },
+ "red_block_basic_robolab": {
+  "extent": 0.047,
+  "file": "red_block.usd",
+  "height": 0.047,
+  "high": [
+   0.0235,
+   0.0235,
+   0.0235
+  ],
+  "low": [
+   -0.0235,
+   -0.0235,
+   -0.0235
+  ],
+  "size": [
+   0.047,
+   0.047,
+   0.047
+  ]
+ },
+ "red_container": {
+  "extent": 0.615,
+  "file": "container_h20_red.usd",
+  "height": 0.0903,
+  "high": [
+   0.3075,
+   0.2075,
+   0.0903
+  ],
+  "low": [
+   -0.3075,
+   -0.2075,
+   -0.0
+  ],
+  "size": [
+   0.615,
+   0.415,
+   0.0903
+  ]
+ },
+ "red_hammer_robolab": {
+  "extent": 0.386,
+  "file": "hammer_3.usd",
+  "height": 0.0382,
+  "high": [
+   0.193,
+   0.0714,
+   0.0191
+  ],
+  "low": [
+   -0.193,
+   -0.0714,
+   -0.0191
+  ],
+  "size": [
+   0.386,
+   0.1428,
+   0.0382
+  ]
+ },
+ "red_onion_fruits_veggies_robolab": {
+  "extent": 0.0597,
+  "file": "red_onion.usd",
+  "height": 0.0903,
+  "high": [
+   0.0291,
+   0.0311,
+   0.0842
+  ],
+  "low": [
+   -0.0303,
+   -0.0286,
+   -0.0061
+  ],
+  "size": [
+   0.0594,
+   0.0597,
+   0.0903
+  ]
+ },
+ "remote_control_hot3d_robolab": {
+  "extent": 0.0356,
+  "file": "remote_control.usd",
+  "height": 0.1643,
+  "high": [
+   0.0174,
+   -0.0124,
+   0.0824
+  ],
+  "low": [
+   -0.0182,
+   -0.0377,
+   -0.0819
+  ],
+  "size": [
+   0.0356,
+   0.0253,
+   0.1643
+  ]
+ },
+ "rubiks_cube_hot3d_robolab": {
+  "extent": 0.0583,
+  "file": "rubiks_cube.usd",
+  "height": 0.058,
+  "high": [
+   0.019,
+   0.0578,
+   0.0266
+  ],
+  "low": [
+   -0.0393,
+   0.0,
+   -0.0314
+  ],
+  "size": [
+   0.0583,
+   0.0578,
+   0.058
+  ]
+ },
+ "salad_dressing_bottle_hot3d_robolab": {
+  "extent": 0.0639,
+  "file": "salad_dressing_bottle.usd",
+  "height": 0.1471,
+  "high": [
+   0.0212,
+   0.0343,
+   0.1471
+  ],
+  "low": [
+   -0.0225,
+   -0.0296,
+   -0.0
+  ],
+  "size": [
+   0.0437,
+   0.0639,
+   0.1471
+  ]
+ },
+ "salad_tongs_handal_robolab": {
+  "extent": 0.316,
+  "file": "salad_tongs.usd",
+  "height": 0.0402,
+  "high": [
+   0.158,
+   0.0301,
+   0.0201
+  ],
+  "low": [
+   -0.158,
+   -0.0301,
+   -0.0201
+  ],
+  "size": [
+   0.316,
+   0.0602,
+   0.0402
+  ]
+ },
+ "scissors_ycb_robolab": {
+  "extent": 0.2016,
+  "file": "scissors.usd",
+  "height": 0.0158,
+  "high": [
+   0.048,
+   0.1008,
+   0.0079
+  ],
+  "low": [
+   -0.048,
+   -0.1008,
+   -0.0079
+  ],
+  "size": [
+   0.096,
+   0.2016,
+   0.0158
+  ]
+ },
+ "serving_bowl_vomp_robolab": {
+  "extent": 0.1597,
+  "file": "serving_bowl.usd",
+  "height": 0.052,
+  "high": [
+   0.0798,
+   0.0796,
+   0.0518
+  ],
+  "low": [
+   -0.0798,
+   -0.0801,
+   -0.0002
+  ],
+  "size": [
+   0.1596,
+   0.1597,
+   0.052
+  ]
+ },
+ "serving_spoon_handal_robolab": {
+  "extent": 0.3136,
+  "file": "serving_spoon.usd",
+  "height": 0.0308,
+  "high": [
+   0.1568,
+   0.0349,
+   0.0154
+  ],
+  "low": [
+   -0.1568,
+   -0.0349,
+   -0.0154
+  ],
+  "size": [
+   0.3136,
+   0.0698,
+   0.0308
+  ]
+ },
+ "serving_spoons_handal_robolab": {
+  "extent": 0.3152,
+  "file": "serving_spoons.usd",
+  "height": 0.031,
+  "high": [
+   0.1576,
+   0.0345,
+   0.0155
+  ],
+  "low": [
+   -0.1576,
+   -0.0345,
+   -0.0155
+  ],
+  "size": [
+   0.3152,
+   0.069,
+   0.031
+  ]
+ },
+ "small_gear": {
+  "extent": 0.0219,
+  "file": "factory_gear_small.usd",
+  "height": 0.025,
+  "high": [
+   0.0617,
+   0.0109,
+   0.03
+  ],
+  "low": [
+   0.0398,
+   -0.0109,
+   0.005
+  ],
+  "size": [
+   0.0219,
+   0.0218,
+   0.025
+  ]
+ },
+ "smartphone_hot3d_robolab": {
+  "extent": 0.154,
+  "file": "smartphone.usd",
+  "height": 0.0104,
+  "high": [
+   0.0364,
+   0.077,
+   0.0047
+  ],
+  "low": [
+   -0.0365,
+   -0.077,
+   -0.0057
+  ],
+  "size": [
+   0.0729,
+   0.154,
+   0.0104
+  ]
+ },
+ "snickers_bar_objaverse_robolab": {
+  "extent": 0.0825,
+  "file": "snickers_bar.usd",
+  "height": 0.0172,
+  "high": [
+   0.0174,
+   0.0408,
+   0.0176
+  ],
+  "low": [
+   -0.011,
+   -0.0417,
+   0.0004
+  ],
+  "size": [
+   0.0284,
+   0.0825,
+   0.0172
+  ]
+ },
+ "soft_scrub_ycb_robolab": {
+  "extent": 0.1024,
+  "file": "soft_scrub.usd",
+  "height": 0.2506,
+  "high": [
+   0.0512,
+   0.0339,
+   0.1253
+  ],
+  "low": [
+   -0.0512,
+   -0.0339,
+   -0.1253
+  ],
+  "size": [
+   0.1024,
+   0.0678,
+   0.2506
+  ]
+ },
+ "soup_can_hot3d_robolab": {
+  "extent": 0.0707,
+  "file": "soup_can.usd",
+  "height": 0.0818,
+  "high": [
+   0.0379,
+   0.0347,
+   0.0817
+  ],
+  "low": [
+   -0.0328,
+   -0.0311,
+   -0.0001
+  ],
+  "size": [
+   0.0707,
+   0.0658,
+   0.0818
+  ]
+ },
+ "spaghetti_hope_robolab": {
+  "extent": 0.2498,
+  "file": "spaghetti.usd",
+  "height": 0.0498,
+  "high": [
+   0.0142,
+   0.1249,
+   0.0249
+  ],
+  "low": [
+   -0.0142,
+   -0.1249,
+   -0.0249
+  ],
+  "size": [
+   0.0284,
+   0.2498,
+   0.0498
+  ]
+ },
+ "spam_can_ycb_robolab": {
+  "extent": 0.1022,
+  "file": "spam_can.usd",
+  "height": 0.0836,
+  "high": [
+   0.0511,
+   0.0302,
+   0.0418
+  ],
+  "low": [
+   -0.0511,
+   -0.0302,
+   -0.0418
+  ],
+  "size": [
+   0.1022,
+   0.0604,
+   0.0836
+  ]
+ },
+ "spatula_01_vomp_robolab": {
+  "extent": 0.2654,
+  "file": "spatula_01.usd",
+  "height": 0.0134,
+  "high": [
+   0.1327,
+   0.035,
+   0.0067
+  ],
+  "low": [
+   -0.1327,
+   -0.0507,
+   -0.0067
+  ],
+  "size": [
+   0.2654,
+   0.0857,
+   0.0134
+  ]
+ },
+ "spatula_13_vomp_robolab": {
+  "extent": 0.2728,
+  "file": "spatula_13.usd",
+  "height": 0.0074,
+  "high": [
+   0.0294,
+   0.1364,
+   0.0037
+  ],
+  "low": [
+   -0.0294,
+   -0.1364,
+   -0.0037
+  ],
+  "size": [
+   0.0588,
+   0.2728,
+   0.0074
+  ]
+ },
+ "spatula_14_vomp_robolab": {
+  "extent": 0.273,
+  "file": "spatula_14.usd",
+  "height": 0.0074,
+  "high": [
+   0.0294,
+   0.1365,
+   0.0037
+  ],
+  "low": [
+   -0.0294,
+   -0.1365,
+   -0.0037
+  ],
+  "size": [
+   0.0588,
+   0.273,
+   0.0074
+  ]
+ },
+ "spatula_15_vomp_robolab": {
+  "extent": 0.2728,
+  "file": "spatula_15.usd",
+  "height": 0.0074,
+  "high": [
+   0.1364,
+   0.0294,
+   0.0037
+  ],
+  "low": [
+   -0.1364,
+   -0.0294,
+   -0.0037
+  ],
+  "size": [
+   0.2728,
+   0.0588,
+   0.0074
+  ]
+ },
+ "spatula_hot3d_robolab": {
+  "extent": 0.368,
+  "file": "spatula.usd",
+  "height": 0.0416,
+  "high": [
+   0.1775,
+   0.1733,
+   0.0415
+  ],
+  "low": [
+   -0.1905,
+   -0.1614,
+   -0.0001
+  ],
+  "size": [
+   0.368,
+   0.3347,
+   0.0416
+  ]
+ },
+ "spoon_1_handal_robolab": {
+  "extent": 0.1284,
+  "file": "spoon_1.usd",
+  "height": 0.0214,
+  "high": [
+   0.0642,
+   0.0209,
+   0.0107
+  ],
+  "low": [
+   -0.0642,
+   -0.0209,
+   -0.0107
+  ],
+  "size": [
+   0.1284,
+   0.0418,
+   0.0214
+  ]
+ },
+ "spoon_2_handal_robolab": {
+  "extent": 0.1166,
+  "file": "spoon_2.usd",
+  "height": 0.0108,
+  "high": [
+   0.0583,
+   0.0104,
+   0.0054
+  ],
+  "low": [
+   -0.0583,
+   -0.0104,
+   -0.0054
+  ],
+  "size": [
+   0.1166,
+   0.0208,
+   0.0108
+  ]
+ },
+ "spoon_big_vomp_robolab": {
+  "extent": 0.1694,
+  "file": "spoon_big.usd",
+  "height": 0.0171,
+  "high": [
+   0.0847,
+   0.021,
+   0.0169
+  ],
+  "low": [
+   -0.0847,
+   -0.021,
+   -0.0002
+  ],
+  "size": [
+   0.1694,
+   0.042,
+   0.0171
+  ]
+ },
+ "spoon_handal_robolab": {
+  "extent": 0.124,
+  "file": "spoon.usd",
+  "height": 0.0176,
+  "high": [
+   0.062,
+   0.0171,
+   0.0088
+  ],
+  "low": [
+   -0.062,
+   -0.0171,
+   -0.0088
+  ],
+  "size": [
+   0.124,
+   0.0342,
+   0.0176
+  ]
+ },
+ "spring_clamp_ycb_robolab": {
+  "extent": 0.2098,
+  "file": "spring_clamp.usd",
+  "height": 0.0364,
+  "high": [
+   0.1049,
+   0.0822,
+   0.0182
+  ],
+  "low": [
+   -0.1049,
+   -0.0822,
+   -0.0182
+  ],
+  "size": [
+   0.2098,
+   0.1644,
+   0.0364
+  ]
+ },
+ "stand_mixer": {
+  "extent": 0.331,
+  "file": "StandMixer013.usd",
+  "height": 0.3256,
+  "high": [
+   0.1067,
+   0.1655,
+   0.1628
+  ],
+  "low": [
+   -0.1067,
+   -0.1655,
+   -0.1628
+  ],
+  "size": [
+   0.2134,
+   0.331,
+   0.3256
+  ]
+ },
+ "storage_box_hot3d_robolab": {
+  "extent": 0.0856,
+  "file": "storage_box.usd",
+  "height": 0.1236,
+  "high": [
+   0.051,
+   0.0366,
+   0.1237
+  ],
+  "low": [
+   -0.0346,
+   -0.0293,
+   0.0001
+  ],
+  "size": [
+   0.0856,
+   0.0659,
+   0.1236
+  ]
+ },
+ "sugar_box_ycb_robolab": {
+  "extent": 0.094,
+  "file": "sugar_box.usd",
+  "height": 0.176,
+  "high": [
+   0.0248,
+   0.047,
+   0.088
+  ],
+  "low": [
+   -0.0248,
+   -0.047,
+   -0.088
+  ],
+  "size": [
+   0.0496,
+   0.094,
+   0.176
+  ]
+ },
+ "tomato_sauce_can_hope_robolab": {
+  "extent": 0.0702,
+  "file": "tomato_sauce_can.usd",
+  "height": 0.0828,
+  "high": [
+   0.0351,
+   0.0332,
+   0.0414
+  ],
+  "low": [
+   -0.0351,
+   -0.0332,
+   -0.0414
+  ],
+  "size": [
+   0.0702,
+   0.0664,
+   0.0828
+  ]
+ },
+ "tomato_sauce_can_hot3d_robolab": {
+  "extent": 0.0707,
+  "file": "tomato_sauce_can.usd",
+  "height": 0.0823,
+  "high": [
+   0.0364,
+   0.0356,
+   0.0823
+  ],
+  "low": [
+   -0.0343,
+   -0.0302,
+   -0.0
+  ],
+  "size": [
+   0.0707,
+   0.0658,
+   0.0823
+  ]
+ },
+ "tomato_soup_can_ycb_robolab": {
+  "extent": 0.0678,
+  "file": "tomato_soup_can.usd",
+  "height": 0.102,
+  "high": [
+   0.0339,
+   0.0339,
+   0.051
+  ],
+  "low": [
+   -0.0339,
+   -0.0339,
+   -0.051
+  ],
+  "size": [
+   0.0678,
+   0.0678,
+   0.102
+  ]
+ },
+ "tuna_can_ycb_robolab": {
+  "extent": 0.0856,
+  "file": "tuna_can.usd",
+  "height": 0.0336,
+  "high": [
+   0.0428,
+   0.0428,
+   0.0168
+  ],
+  "low": [
+   -0.0428,
+   -0.0428,
+   -0.0168
+  ],
+  "size": [
+   0.0856,
+   0.0856,
+   0.0336
+  ]
+ },
+ "utilityjug_a01_vomp_robolab": {
+  "extent": 0.0968,
+  "file": "utilityjug_a01.usd",
+  "height": 0.2803,
+  "high": [
+   0.0483,
+   0.0484,
+   0.2803
+  ],
+  "low": [
+   -0.0483,
+   -0.0484,
+   0.0
+  ],
+  "size": [
+   0.0966,
+   0.0968,
+   0.2803
+  ]
+ },
+ "utilityjug_a03_vomp_robolab": {
+  "extent": 0.1714,
+  "file": "utilityjug_a03.usd",
+  "height": 0.3357,
+  "high": [
+   0.0856,
+   0.0857,
+   0.3357
+  ],
+  "low": [
+   -0.0856,
+   -0.0857,
+   -0.0
+  ],
+  "size": [
+   0.1712,
+   0.1714,
+   0.3357
+  ]
+ },
+ "whitepackerbottle_a01_vomp_robolab": {
+  "extent": 0.0434,
+  "file": "whitepackerbottle_a01.usd",
+  "height": 0.0768,
+  "high": [
+   0.021,
+   0.0217,
+   0.0768
+  ],
+  "low": [
+   -0.0223,
+   -0.0217,
+   0.0
+  ],
+  "size": [
+   0.0433,
+   0.0434,
+   0.0768
+  ]
+ },
+ "wireshelving_a01_vomp_robolab": {
+  "extent": 0.7664,
+  "file": "wireshelving_a01.usd",
+  "height": 0.8701,
+  "high": [
+   0.2318,
+   0.3832,
+   0.8701
+  ],
+  "low": [
+   -0.2318,
+   -0.3832,
+   0.0
+  ],
+  "size": [
+   0.4636,
+   0.7664,
+   0.8701
+  ]
+ },
+ "wood_block_ycb_robolab": {
+  "extent": 0.104,
+  "file": "wood_block.usd",
+  "height": 0.2058,
+  "high": [
+   0.052,
+   0.0518,
+   0.1029
+  ],
+  "low": [
+   -0.052,
+   -0.0518,
+   -0.1029
+  ],
+  "size": [
+   0.104,
+   0.1036,
+   0.2058
+  ]
+ },
+ "wood_hammer_robolab": {
+  "extent": 0.331,
+  "file": "hammer_2.usd",
+  "height": 0.0314,
+  "high": [
+   0.1655,
+   0.0648,
+   0.0157
+  ],
+  "low": [
+   -0.1655,
+   -0.0648,
+   -0.0157
+  ],
+  "size": [
+   0.331,
+   0.1296,
+   0.0314
+  ]
+ },
+ "wooden_bowl_hot3d_robolab": {
+  "extent": 0.2801,
+  "file": "wooden_bowl.usd",
+  "height": 0.13,
+  "high": [
+   0.1411,
+   0.1382,
+   0.1301
+  ],
+  "low": [
+   -0.139,
+   -0.1419,
+   0.0001
+  ],
+  "size": [
+   0.2801,
+   0.2801,
+   0.13
+  ]
+ },
+ "wooden_spoons_hot3d_robolab": {
+  "extent": 0.3094,
+  "file": "wooden_spoons.usd",
+  "height": 0.0179,
+  "high": [
+   0.0344,
+   0.1547,
+   0.018
+  ],
+  "low": [
+   -0.034,
+   -0.1547,
+   0.0001
+  ],
+  "size": [
+   0.0684,
+   0.3094,
+   0.0179
+  ]
+ },
+ "yellow_block_basic_robolab": {
+  "extent": 0.047,
+  "file": "yellow_block.usd",
+  "height": 0.047,
+  "high": [
+   0.0235,
+   0.0235,
+   0.0235
+  ],
+  "low": [
+   -0.0235,
+   -0.0235,
+   -0.0235
+  ],
+  "size": [
+   0.047,
+   0.047,
+   0.047
+  ]
+ },
+ "yogurt_cup_hope_robolab": {
+  "extent": 0.068,
+  "file": "yogurt_cup.usd",
+  "height": 0.0536,
+  "high": [
+   0.034,
+   0.034,
+   0.0268
+  ],
+  "low": [
+   -0.034,
+   -0.034,
+   -0.0268
+  ],
+  "size": [
+   0.068,
+   0.068,
+   0.0536
+  ]
+ }
+}

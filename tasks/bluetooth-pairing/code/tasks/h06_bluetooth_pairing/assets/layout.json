@@ -1,0 +1,138 @@
+{
+ "speaker_name": "SoundBox Mini",
+ "neighbours": {
+  "tv": "Kitchen TV",
+  "earbuds": "Mara's Earbuds"
+ },
+ "speaker": {
+  "xy": [
+   0.22,
+   0.18
+  ],
+  "size": [
+   0.1,
+   0.2,
+   0.07
+  ],
+  "top": 0.07
+ },
+ "buttons": {
+  "pair": [
+   0.21,
+   0.13
+  ],
+  "play": [
+   0.21,
+   0.18
+  ],
+  "power": [
+   0.21,
+   0.23
+  ]
+ },
+ "button": {
+  "radius": 0.013,
+  "height": 0.006,
+  "gap": 0.004,
+  "travel": 0.003,
+  "top": 0.08000000000000002,
+  "stiffness": 500.0,
+  "damping": 5.0
+ },
+ "led": {
+  "xy": [
+   0.21,
+   0.098
+  ],
+  "radius": 0.006
+ },
+ "phone": {
+  "xy": [
+   0.2,
+   -0.17
+  ],
+  "size": [
+   0.164,
+   0.078,
+   0.009
+  ],
+  "top": 0.009
+ },
+ "screen": {
+  "size": [
+   0.152,
+   0.07
+  ],
+  "zone": [
+   0.032,
+   0.07
+  ]
+ },
+ "scan_button": [
+  0.14,
+  -0.17
+ ],
+ "rows": [
+  [
+   0.236,
+   -0.17
+  ],
+  [
+   0.204,
+   -0.17
+  ],
+  [
+   0.172,
+   -0.17
+  ]
+ ],
+ "devices": [
+  "speaker",
+  "tv",
+  "earbuds"
+ ],
+ "orders": [
+  [
+   "speaker",
+   "tv",
+   "earbuds"
+  ],
+  [
+   "speaker",
+   "earbuds",
+   "tv"
+  ],
+  [
+   "tv",
+   "speaker",
+   "earbuds"
+  ],
+  [
+   "tv",
+   "earbuds",
+   "speaker"
+  ],
+  [
+   "earbuds",
+   "speaker",
+   "tv"
+  ],
+  [
+   "earbuds",
+   "tv",
+   "speaker"
+  ]
+ ],
+ "assets": {
+  "speaker": "h06_speaker",
+  "phone": "h06_phone",
+  "button_pair": "h06_button_pair",
+  "button_play": "h06_button_play",
+  "button_power": "h06_button_power"
+ },
+ "extent": {
+  "speaker": 0.2,
+  "phone": 0.164,
+  "button": 0.026
+ }
+}

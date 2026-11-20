@@ -1,0 +1,726 @@
+#usda 1.0
+(
+    defaultPrim = "phone"
+    metersPerUnit = 1
+    upAxis = "Z"
+    doc = "A phone lying flat, showing one of its Bluetooth screens (screen_<name>, one visible at a time)."
+)
+
+def Xform "phone" (
+    prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+)
+{
+    def Mesh "body_sides"
+    {
+        float3[] extent = [(-0.082, -0.039, 0), (0.082, 0.039, 0.009)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 37, 36, 1, 2, 38, 37, 2, 3, 39, 38, 3, 4, 40, 39, 4, 5, 41, 40, 5, 6, 42, 41, 6, 7, 43, 42, 7, 8, 44, 43, 8, 9, 45, 44, 9, 10, 46, 45, 10, 11, 47, 46, 11, 12, 48, 47, 12, 13, 49, 48, 13, 14, 50, 49, 14, 15, 51, 50, 15, 16, 52, 51, 16, 17, 53, 52, 17, 18, 54, 53, 18, 19, 55, 54, 19, 20, 56, 55, 20, 21, 57, 56, 21, 22, 58, 57, 22, 23, 59, 58, 23, 24, 60, 59, 24, 25, 61, 60, 25, 26, 62, 61, 26, 27, 63, 62, 27, 28, 64, 63, 28, 29, 65, 64, 29, 30, 66, 65, 30, 31, 67, 66, 31, 32, 68, 67, 32, 33, 69, 68, 33, 34, 70, 69, 34, 35, 71, 70, 35, 0, 36, 71]
+        point3f[] points = [(0.082, 0.029, 0), (0.0818079, 0.0309509, 0), (0.0812388, 0.0328268, 0), (0.0803147, 0.0345557, 0), (0.0790711, 0.0360711, 0), (0.0775557, 0.0373147, 0), (0.0758268, 0.0382388, 0), (0.0739509, 0.0388079, 0), (0.072, 0.039, 0), (-0.072, 0.039, 0), (-0.0739509, 0.0388079, 0), (-0.0758268, 0.0382388, 0), (-0.0775557, 0.0373147, 0), (-0.0790711, 0.0360711, 0), (-0.0803147, 0.0345557, 0), (-0.0812388, 0.0328268, 0), (-0.0818079, 0.0309509, 0), (-0.082, 0.029, 0), (-0.082, -0.029, 0), (-0.0818079, -0.0309509, 0), (-0.0812388, -0.0328268, 0), (-0.0803147, -0.0345557, 0), (-0.0790711, -0.0360711, 0), (-0.0775557, -0.0373147, 0), (-0.0758268, -0.0382388, 0), (-0.0739509, -0.0388079, 0), (-0.072, -0.039, 0), (0.072, -0.039, 0), (0.0739509, -0.0388079, 0), (0.0758268, -0.0382388, 0), (0.0775557, -0.0373147, 0), (0.0790711, -0.0360711, 0), (0.0803147, -0.0345557, 0), (0.0812388, -0.0328268, 0), (0.0818079, -0.0309509, 0), (0.082, -0.029, 0), (0.082, 0.029, 0.009), (0.0818079, 0.0309509, 0.009), (0.0812388, 0.0328268, 0.009), (0.0803147, 0.0345557, 0.009), (0.0790711, 0.0360711, 0.009), (0.0775557, 0.0373147, 0.009), (0.0758268, 0.0382388, 0.009), (0.0739509, 0.0388079, 0.009), (0.072, 0.039, 0.009), (-0.072, 0.039, 0.009), (-0.0739509, 0.0388079, 0.009), (-0.0758268, 0.0382388, 0.009), (-0.0775557, 0.0373147, 0.009), (-0.0790711, 0.0360711, 0.009), (-0.0803147, 0.0345557, 0.009), (-0.0812388, 0.0328268, 0.009), (-0.0818079, 0.0309509, 0.009), (-0.082, 0.029, 0.009), (-0.082, -0.029, 0.009), (-0.0818079, -0.0309509, 0.009), (-0.0812388, -0.0328268, 0.009), (-0.0803147, -0.0345557, 0.009), (-0.0790711, -0.0360711, 0.009), (-0.0775557, -0.0373147, 0.009), (-0.0758268, -0.0382388, 0.009), (-0.0739509, -0.0388079, 0.009), (-0.072, -0.039, 0.009), (0.072, -0.039, 0.009), (0.0739509, -0.0388079, 0.009), (0.0758268, -0.0382388, 0.009), (0.0775557, -0.0373147, 0.009), (0.0790711, -0.0360711, 0.009), (0.0803147, -0.0345557, 0.009), (0.0812388, -0.0328268, 0.009), (0.0818079, -0.0309509, 0.009), (0.082, -0.029, 0.009)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/frame>
+    }
+    def Mesh "body_caps"
+    {
+        float3[] extent = [(-0.082, -0.039, 0), (0.082, 0.039, 0.009)]
+        int[] faceVertexCounts = [36, 36]
+        int[] faceVertexIndices = [35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71]
+        point3f[] points = [(0.082, 0.029, 0), (0.0818079, 0.0309509, 0), (0.0812388, 0.0328268, 0), (0.0803147, 0.0345557, 0), (0.0790711, 0.0360711, 0), (0.0775557, 0.0373147, 0), (0.0758268, 0.0382388, 0), (0.0739509, 0.0388079, 0), (0.072, 0.039, 0), (-0.072, 0.039, 0), (-0.0739509, 0.0388079, 0), (-0.0758268, 0.0382388, 0), (-0.0775557, 0.0373147, 0), (-0.0790711, 0.0360711, 0), (-0.0803147, 0.0345557, 0), (-0.0812388, 0.0328268, 0), (-0.0818079, 0.0309509, 0), (-0.082, 0.029, 0), (-0.082, -0.029, 0), (-0.0818079, -0.0309509, 0), (-0.0812388, -0.0328268, 0), (-0.0803147, -0.0345557, 0), (-0.0790711, -0.0360711, 0), (-0.0775557, -0.0373147, 0), (-0.0758268, -0.0382388, 0), (-0.0739509, -0.0388079, 0), (-0.072, -0.039, 0), (0.072, -0.039, 0), (0.0739509, -0.0388079, 0), (0.0758268, -0.0382388, 0), (0.0775557, -0.0373147, 0), (0.0790711, -0.0360711, 0), (0.0803147, -0.0345557, 0), (0.0812388, -0.0328268, 0), (0.0818079, -0.0309509, 0), (0.082, -0.029, 0), (0.082, 0.029, 0.009), (0.0818079, 0.0309509, 0.009), (0.0812388, 0.0328268, 0.009), (0.0803147, 0.0345557, 0.009), (0.0790711, 0.0360711, 0.009), (0.0775557, 0.0373147, 0.009), (0.0758268, 0.0382388, 0.009), (0.0739509, 0.0388079, 0.009), (0.072, 0.039, 0.009), (-0.072, 0.039, 0.009), (-0.0739509, 0.0388079, 0.009), (-0.0758268, 0.0382388, 0.009), (-0.0775557, 0.0373147, 0.009), (-0.0790711, 0.0360711, 0.009), (-0.0803147, 0.0345557, 0.009), (-0.0812388, 0.0328268, 0.009), (-0.0818079, 0.0309509, 0.009), (-0.082, 0.029, 0.009), (-0.082, -0.029, 0.009), (-0.0818079, -0.0309509, 0.009), (-0.0812388, -0.0328268, 0.009), (-0.0803147, -0.0345557, 0.009), (-0.0790711, -0.0360711, 0.009), (-0.0775557, -0.0373147, 0.009), (-0.0758268, -0.0382388, 0.009), (-0.0739509, -0.0388079, 0.009), (-0.072, -0.039, 0.009), (0.072, -0.039, 0.009), (0.0739509, -0.0388079, 0.009), (0.0758268, -0.0382388, 0.009), (0.0775557, -0.0373147, 0.009), (0.0790711, -0.0360711, 0.009), (0.0803147, -0.0345557, 0.009), (0.0812388, -0.0328268, 0.009), (0.0818079, -0.0309509, 0.009), (0.082, -0.029, 0.009)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/glass>
+    }
+    def Mesh "screen_home"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_home>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+    }
+    def Mesh "screen_scan"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_scan>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_list_0_0"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_list_0_0>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_list_0_1"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_list_0_1>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_list_1_0"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_list_1_0>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_list_1_1"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_list_1_1>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_list_2_0"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_list_2_0>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_list_2_1"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_list_2_1>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_list_3_0"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_list_3_0>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_list_3_1"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_list_3_1>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_list_4_0"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_list_4_0>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_list_4_1"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_list_4_1>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_list_5_0"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_list_5_0>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_list_5_1"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_list_5_1>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_connecting"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_connecting>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Mesh "screen_connected"
+    {
+        float3[] extent = [(-0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        int[] faceVertexCounts = [4]
+        int[] faceVertexIndices = [0, 1, 2, 3]
+        point3f[] points = [(-0.076, 0.035, 0.0093), (-0.076, -0.035, 0.0093), (0.076, -0.035, 0.0093), (0.076, 0.035, 0.0093)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </phone/Looks/screen_connected>
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (1, 1), (0, 1)] (interpolation = "faceVarying")
+        token visibility = "invisible"
+    }
+    def Cube "collider" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        double size = 1
+        float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+        double3 xformOp:translate = (0, 0, 0.0045)
+        float3 xformOp:scale = (0.164, 0.078, 0.009)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        token visibility = "invisible"
+    }
+    def Scope "Looks"
+    {
+        def Material "frame"
+        {
+            token outputs:surface.connect = </phone/Looks/frame/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.0612461, 0.0648033, 0.0761854)
+                float inputs:roughness = 0.3
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+        }
+        def Material "glass"
+        {
+            token outputs:surface.connect = </phone/Looks/glass/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.00242822, 0.00242822, 0.00303527)
+                float inputs:roughness = 0.1
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+        }
+        def Material "screen_home"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_home/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_home/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_home.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_home/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_scan"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_scan/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_scan/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_scan.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_scan/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_list_0_0"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_list_0_0/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_list_0_0/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_list_0_0.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_list_0_0/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_list_0_1"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_list_0_1/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_list_0_1/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_list_0_1.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_list_0_1/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_list_1_0"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_list_1_0/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_list_1_0/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_list_1_0.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_list_1_0/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_list_1_1"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_list_1_1/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_list_1_1/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_list_1_1.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_list_1_1/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_list_2_0"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_list_2_0/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_list_2_0/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_list_2_0.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_list_2_0/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_list_2_1"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_list_2_1/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_list_2_1/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_list_2_1.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_list_2_1/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_list_3_0"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_list_3_0/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_list_3_0/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_list_3_0.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_list_3_0/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_list_3_1"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_list_3_1/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_list_3_1/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_list_3_1.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_list_3_1/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_list_4_0"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_list_4_0/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_list_4_0/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_list_4_0.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_list_4_0/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_list_4_1"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_list_4_1/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_list_4_1/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_list_4_1.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_list_4_1/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_list_5_0"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_list_5_0/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_list_5_0/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_list_5_0.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_list_5_0/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_list_5_1"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_list_5_1/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_list_5_1/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_list_5_1.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_list_5_1/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_connecting"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_connecting/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_connecting/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_connecting.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_connecting/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+        def Material "screen_connected"
+        {
+            token outputs:surface.connect = </phone/Looks/screen_connected/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0, 0, 0)
+                color3f inputs:emissiveColor.connect = </phone/Looks/screen_connected/Tex.outputs:rgb>
+                float inputs:roughness = 0.15
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+            def Shader "Tex"
+            {
+                uniform token info:id = "UsdUVTexture"
+                asset inputs:file = @./textures/screen_connected.png@
+                token inputs:sourceColorSpace = "sRGB"
+                token inputs:wrapS = "clamp"
+                token inputs:wrapT = "clamp"
+                float2 inputs:st.connect = </phone/Looks/screen_connected/St.outputs:result>
+                float3 outputs:rgb
+            }
+            def Shader "St"
+            {
+                uniform token info:id = "UsdPrimvarReader_float2"
+                string inputs:varname = "st"
+                float2 outputs:result
+            }
+        }
+    }
+}
