@@ -2,7 +2,7 @@
 
 Instruction: `Lower the lab scissor jack until the sample beaker clears the fixed pH probe, move the sample beaker onto the blue mat, set the rinse beaker on the jack, and raise the jack until the probe tip sits inside the green immersion band without touching the beaker floor.`
 
-Files: `task.json`; `task.py` (rules, coupling, `score()`); `scene.py` (bodies, joints); `parts.py` (figures, sources); `checks.py`, `trials.py`, `demo.py`; `test_lab_jack_probe.py`; `mechkit.py`, `demo_kit.py`; `start_top.png`, `start_top_policy.png` (320 x 176), `start_left_wrist.png`, `start_right_wrist.png`, `end_top.png`, `end_top_policy.png`.
+Files: `task.json`; `task.py` (rules, coupling, `score()`); `scene.py`; `parts.py` (figures, sources); `checks.py`, `trials.py`, `demo.py`; `test_lab_jack_probe.py`; `mechkit.py`, `demo_kit.py`; pictures named below.
 
 ![Start top camera](start_top.png)
 
@@ -29,12 +29,13 @@ Coordinates in cm from the arm-base midpoint (`x` forward, `y` left, `z` up from
 ## Scoring and stand-ins
 
 - **Whole-trial zero rules** (level side video against a millimetre scale and top video; end photo confirming): `0` if (a) `probe` deflects laterally `> 4.0 mm`, (b) a beaker floor touches `probe`'s tip (`0 mm` gap; simulated via `>= 1.2 mm` / `>= 3.0 N` witness spring), (c) either beaker tilts `> 25 deg` or touches the bare bench outside its pad, or (d) `jack_base` slides `> 25 mm`.
-- **End levels** (both hands `>= 30 mm` clear; deck/beakers drifting `<= 2.0 mm` over `1.0 s` / `20` steps):
-  - `0.25`: deck lowered `< 70.0 mm` to clear `probe`, and `beaker_sample` upright (`<= 8 deg`) inside `blue_mat` (`<= 36 mm` from centre in `x`, `y`).
-  - `0.5`: `0.25` met, and `beaker_rinse` upright (`<= 8 deg`) on `jack_deck` coaxial with `probe` (`<= 12.0 mm` offset, `>= 4.0 mm` clear of inner wall), tip outside `20.0-40.0 mm` depth.
-  - `1.0`: `0.5` met, and `probe` tip sits `20.0` to `40.0 mm` below `beaker_rinse`'s rim (`deck` `90.0-110.0 mm`, `>= 18.0 mm` above floor).
+- **Whole-trial event, needed for any credit:** at some moment the deck went below `70.0 mm` (the `60 mm` sample beaker's rim below the `130 mm` tip), read with its time on the side video against the scale. Not an end state: at `1.0` the deck stands at `90-110 mm`.
+- **End levels**, the highest met (both hands `>= 30 mm` clear; deck and beakers moving `<= 2.0 mm` over `1.0 s` / `20` steps). *Sample placed:* `beaker_sample` upright (`<= 8 deg`) wholly inside `blue_mat` (centre `<= 36 mm` from its centre in `x`, `y`). *Rinse placed:* `beaker_rinse` upright (`<= 8 deg`) on `jack_deck`, coaxial with `probe` (`<= 12.0 mm` offset, `>= 4.0 mm` clear of its inner wall).
+  - `0.25`: the event and the sample placed.
+  - `0.5`: the event, the sample placed and the rinse placed.
+  - `1.0`: the event, the sample placed, the rinse placed, and `probe`'s tip `20.0-40.0 mm` below `beaker_rinse`'s rim (deck `90.0-110.0 mm`, `>= 18.0 mm` above the floor).
 - **Shortcuts blocked:** sideways pull before lowering hits `probe` (`0`); upward lift hits floor on `probe` (`0`); cranking to an upper stop bottoms out (`0`); mid-air holding fails deck-support and `30 mm` clearance (`0`).
-- **What stands in for what:** Prismatic `deck_z` + half-height `carrier_z` preserve two-way screw work (`-F * lead/rad`); dry green band stands in for a `40 mL` rinse; `65 g` beaker mass (vs `15 g` true PP) stabilises `20 N` grasps; witness springs (`8.5 N m/rad`, `2500 N/m`) read strikes and bottoming; `demo.py` plans arm moves from poses (`states set directly`: none in `demo.py`; `trials.py` sets states for isolated checks).
+- **What stands in for what:** Prismatic `deck_z` + half-height `carrier_z` preserve two-way screw work (`-F * lead/rad`); dry green band stands in for a `40 mL` rinse; `65 g` beaker mass (vs `15 g` true PP) stabilises `20 N` grasps; witness springs (`8.5 N m/rad`, `2500 N/m`) read strikes and bottoming; `demo.py` sets no states; `trials.py` does, for isolated checks.
 
 ## Key figures and bilateral forces
 
@@ -58,22 +59,22 @@ Coordinates in cm from the arm-base midpoint (`x` forward, `y` left, `z` up from
 
 ## First minutes of a real trial
 
-About `5 min`: caliper-check Nalgene `1201-0050` (`60 x 48 mm`) and BOCHEM `11120` wheel (`40 mm`) (`1 min`); weigh jack (`1.65 kg`) and beaker (`15 g`) (`1 min`); measure vertical travel per turn over `60-100 mm` with a ruler (`1 min`); pull a cord on the wheel rim with a spring scale for breakaway torque (`1 min`); verify `Z_PROBE_TIP = 130 mm` and `8 mm` gap at `z_deck = 62 mm` (`1 min`).
+About `6 min`: caliper-check Nalgene `1201-0050` (`60 x 48 mm`) and BOCHEM `11120` wheel (`40 mm`) (`1 min`); weigh jack (`1.65 kg`) and beaker (`15 g`) (`1 min`); travel per wheel turn: deck height on a steel ruler after each of `5` turns up from `62 mm` (estimate `18.0 mm/rev` over `62-98 mm`) (`2 min`); operating torque: a luggage scale on a string round the `40 mm` wheel rim (force x `20 mm`: about `5.5 N` for the `0.10 N m` drag estimate plus the empty deck) (`1 min`); verify `Z_PROBE_TIP = 130 mm` and the `8 mm` gap at `z_deck = 62 mm` (`1 min`). A different reading replaces the estimate (`parts.LEAD_MM_REV`, `parts.WHEEL_HOLD_NM`).
 
 ## Validation and how it differs
 
-- **Checks:** `10` unit tests pass; `checks.py` passes `36` poses (`IK <= 0.085 mm`, margins `>= 15.8 deg`) and `2 s` idle (`g1f1`, `0.0`); `trials.py` (`g2t1`) shows lateral strike `0.0`, bottom-out `0.0`, `0.25`, `0.5`, `1.0`; `demo.py --check` (`g3c5`) scores `1.0` in `1,715` steps (`85.75 s`, `8` CCW + `12` CW strokes = `3.13` turns total, `immersion = 23.64 mm`, `zero = null`).
-- **How it differs:** Public suites (`EFE AutoBio` *Pipette*, *Insert Centrifuge 5430*, *Thermal Cycler*; `BEHAVIOR-1K`; `RoboCasa365`) handle tubes, pipettes, or lids without a `DIN 12897` scissor jack or fixed overhead probe. Unlike lowering a movable probe into a bath, loading cuvettes, or holding a one-way lift lever, here the probe is fixed and the robot lowers a pantograph deck to clear a submerged jam, swaps vessels beneath it, and raises into a bounded window below floor bottoming.
+- **Checks:** `10` unit tests pass; `checks.py` passes `36` poses (`IK <= 0.085 mm`, margins `>= 15.8 deg`) and `2 s` idle (`g1f1`, `0.0`); `trials.py` (`g2t1`) shows lateral strike `0.0`, bottom-out `0.0`, `0.25`, `0.5`, `1.0`; `demo.py --check` (`g3c5`) scores `1.0` in `1,715` steps (`85.75 s`, `3.13` wheel turns, immersion `23.64 mm`).
+- **How it differs:** Public suites (`EFE AutoBio` *Pipette*, *Insert Centrifuge 5430*, *Thermal Cycler*; `BEHAVIOR-1K`; `RoboCasa365`) handle tubes, pipettes, or lids without a `DIN 12897` scissor jack or fixed overhead probe. Here the probe is fixed: the robot lowers a pantograph deck to clear a submerged jam, swaps vessels beneath it, and raises into a bounded window below floor bottoming.
 
 ## Assets, sources, and how to run
 
 Zero third-party meshes, textures, or audio (`scene.py` primitives only; `start_left_wrist.png`, `start_right_wrist.png`, `start_top_policy.png`, `end_top_policy.png` rendered here). Sources: [bochem] https://bochem.de/produkt/hebebuehnen-18-10-stahl/?lang=en ; [thermo] https://www.thermofisher.com/order/catalog/product/1201-0050PK .
 
-Tests: `scripts/rta check mech/tasks/lab_jack_probe`. Trials: `scripts/rta simpy <id> mech/tasks/lab_jack_probe/trials.py /workspace/robocurve/outputs/<id>`. Demo: `scripts/rta demo <id> mech/tasks/lab_jack_probe [--check]`. Runtime `<= 120 s` (`2,400` steps at `20 Hz`; demo `85.8 s`). `--seed 0` under the harness gives trial seed `1415158438` with the fixed layout above.
+Tests: `scripts/rta check mech/tasks/lab_jack_probe`. Trials: `scripts/rta simpy <id> mech/tasks/lab_jack_probe/trials.py /workspace/robocurve/outputs/<id>`. Demo: `scripts/rta demo <id> mech/tasks/lab_jack_probe [--check]`. Runtime `<= 120 s` (`2,400` steps at `20 Hz`; demo `85.8 s`). One fixed layout for every seed.
 
 ```bash
 inspect-robots run --embodiment yam_arena --policy dream \
   -E task=mech/tasks/lab_jack_probe/task.py -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
-  --instruction "Lower the lab scissor jack until the sample beaker clears the fixed pH probe, move the sample beaker onto the blue mat, set the rinse beaker on the jack, and raise the jack until the probe tip sits inside the green immersion band without touching the beaker floor." \
+  --instruction "<the instruction above>" \
   --scorer task_score --max-steps 2400 --seed 0 --no-prompt --store-frames --log-dir <log_dir>
 ```
