@@ -7,9 +7,9 @@
 1. The left hand, fingers closed, comes over the forehead, presses the front rim down from 13 deg to 2.6 deg (front
    edge 25 mm over the brow band) and holds it there against the helmet's rocking back and the dial's twist.
 2. With the helmet at the fit the dial is up at 86 mm. The right hand comes in along the dial's axis, pinches its rim and
-   turns it in four regrasps, 75 deg three times and a last 30 deg (255 deg, 12.75 clicks): the band meets the back
-   of the head after about 7 clicks and presses it with CLAMP_N after about 9, so the fit comes from the band, more
-   than 2 clicks past CLAMP_N and 2 short of the dial's stop.
+   turns it in three regrasps, 75 deg twice and a last 60 deg (210 deg, 10.5 clicks): the band meets the back of the
+   head after about 7 clicks and presses it with CLAMP_N after about 9, so the fit comes from the band, inside the
+   comfort bound (at most 4 clicks past first touch: 11 clicks, 220 deg).
 3. Both hands let go and go back to the ready pose; the helmet stays level by the band's hold.
 
 The run's log of the stated forces against the travel (check 51) goes to ``check51_log.json`` beside result.json.
@@ -45,10 +45,11 @@ TOP = TABLE_TOP["station"]
 TARGET_TILT_DEG = 2.6  # front edge 25.2 mm over the brow band: the middle of the fit window (15 to 35 mm)
 HOLD_LIFT_M = 0.0008  # closed fingers 0.8 mm over the rim's top: the helmet rocks back onto them (3 mm gave 27.7 mm, h4t2c)
 STROKE_DEG = 75.0  # a full regrasp: wrist roll -37.5 to +37.5 deg (the jaws close on a flat at both ends, parts.DIAL_FLATS)
-# Wrist roll (from, to) per regrasp, 255 deg in all (12.75 clicks of 15: over 2 past CLAMP_N at 9, 2 short of the stop).
+# Wrist roll (from, to) per regrasp, 210 deg in all (10.5 clicks of 15; a stroke gives ~96 %, ~203 deg: CLAMP_N came at
+# 193.5 deg and 75 deg strokes ended at 72.8, 145.4 and 217.4 deg in run h4d1, so the last is 60 deg, under 220 deg).
 # Every regrasp ends at +37.5 deg: from the short one ending at -7.5 deg the way back swept the open fingers across the
 # dial and bumped the helmet 1.7 deg (runs h4t2d, h4t2e); from +37.5 deg it did not (h4t2c).
-STROKES = ((-37.5, 37.5), (-37.5, 37.5), (-37.5, 37.5), (7.5, 37.5))
+STROKES = ((-37.5, 37.5), (-37.5, 37.5), (-22.5, 37.5))
 ENGAGE_BACK_M = 0.004  # grasp point 4 mm behind the dial's middle: fingertips end 9 mm past it, 5.5 mm short of the band
 RETREAT_M = 0.022  # open jaws back off 22 mm along the dial's axis between regrasps
 BACK_OFF_M = 0.060  # after the last regrasp: 60 mm back along the axis, then straight to the ready pose

@@ -27,6 +27,7 @@ HELMET_FIT_ADVICE_URL = "https://www.decathlon.co.uk/p/500-city-cycling-helmet-n
 HEAD_MAKER_URL = "https://www.rayher.com/de/styropor-kopf-weiblich-29-cm-3396700"
 HEAD_LISTING_URL = "https://www.mosaikshop.se/en/product/styrofoam-head-female-height-29-cm"
 HEAD_US_TWIN_URL = "https://shop.floracraft.com/amfile/file/download/file/64/product/4751/"
+HEADFORM_EN960_URL = "https://www.cadexinc.com/?p=201"  # a maker of EN 960 test head forms (its size list)
 
 GRAVITY = 9.81  # m/s^2
 OVER = 0.001  # m: the head form is built 1 mm over the bench top so frame 0 starts with no contact
@@ -183,6 +184,13 @@ PULL_TEST_N = 10.0  # N: the bench test, a luggage scale hooked under the front 
 PULL_MAX_MOVE_M = 0.005  # m: a fitted helmet's front edge lifts less than this under the pull
 # The pull's moment about the strap anchors, with the helmet's own rocking back: the one figure the clamp must hold.
 PULL_MOMENT_NM = round(PULL_TEST_N * BRIM_ARM + TIP_BACK_NM, 3)  # 1.19 N m
+# The upper tightness check (comfort bound): full credit also needs the dial at most COMFORT_MAX_CLICKS past the band's
+# first touch on the head (PRETOUCH_CLICKS from the open stop), so at most COMFORT_MAX_DIAL_CLICKS from the open stop.
+# The bench counts the clicks from the open stop on the trial video and again turning the dial back to it at reset;
+# the simulator reads the dial's angle. Snug is CLAMP_CLICKS past touch (CLAMP_N holds the pull); more only presses.
+COMFORT_MAX_CLICKS = 4  # clicks (estimate: snug CLAMP_CLICKS = 2 plus 2: about twice the CLAMP_N press, ring 8 mm under first touch)
+COMFORT_MAX_DIAL_CLICKS = PRETOUCH_CLICKS + COMFORT_MAX_CLICKS  # 11 clicks = 220 deg from the open stop
+HEADFORM_EN960_SIZE = 555  # the representative head form for the bound: EN 960 size 555 (555 mm round), inside 53-56 cm
 
 MAX_HEAD_SHIFT_M = 0.010  # m (10.0 mm whole-trial zero rule: the head form moved from its tape marks)
 # Whole-trial zero rule: an arm touching the head form's face (eyes, nose). A touch, not a force: the simulator lists
@@ -334,6 +342,36 @@ KEY_FIGURES = (
             "holds the 1.19 N m moment of a 10 N upward front-edge pull to 2.3 mm (< 5 mm)"
         ),
         "check": "Count clicks open-to-stop and to touch; hook luggage scale under front edge and pull to 10 N (2 min)",
+    },
+    {
+        "figure": "Representative head form for the comfort bound (EN 960 size in the helmet's 53-56 cm range)",
+        "constants": "HEADFORM_EN960_SIZE",
+        "value": f"EN 960 size {HEADFORM_EN960_SIZE}",
+        "kind": "maker",
+        "source": (
+            f'maker: Cadex full magnesium headform P/N 100_01_HFM ({HEADFORM_EN960_URL}): "Number sizes available '
+            f'(EN 960): 495 – 515 – 525 – 535 – 555 – 575 – 585 – 605 – 625", "designed and manufactured to meet the '
+            f'ISO/DIS 6220 or EN 960 standards"; size 555 (555 mm round) is the one inside the KH 500 S 53-56 cm range '
+            f'nearest the 550 mm foam head form'
+        ),
+        "check": "Tape round the foam head form at the brow line: 550 mm, 5 mm under size 555 (1 min)",
+    },
+    {
+        "figure": "Comfort bound: dial clicks past the band's first touch for full credit",
+        "constants": "COMFORT_MAX_CLICKS, COMFORT_MAX_DIAL_CLICKS",
+        "value": f"{COMFORT_MAX_CLICKS} clicks past touch ({COMFORT_MAX_DIAL_CLICKS} from the open stop)",
+        "kind": "estimate",
+        "source": (
+            "estimate: calibrated as a comfortable fit on an EN 960 size-555 head form: snug is the 2 clicks past first "
+            "touch whose 24 N press holds the 10 N pull, and comfortable is taken as at most 2 clicks more, about twice "
+            "that press (48 N on the 55 N/mm pads) with the ring 8 mm (2 mm a click) under its first-touch round, 1.4 % "
+            "of 555 mm; past it the band only presses harder, the pull already held"
+        ),
+        "check": (
+            "On the bought KH 500 S on the head form, dial from the open stop: count clicks to first touch (a paper "
+            "strip under the rear pad stops sliding) and to the first click where the 10 N pull lifts < 5 mm; that click "
+            "must be at or under touch + 4 (2 min)"
+        ),
     },
 )
 
@@ -674,6 +712,8 @@ def summary() -> dict:
             "face_rule": "an arm touching the face (eyes, nose) zeroes the trial",
             "gripper_clear_mm": round(1000 * GRIPPER_CLEAR_M, 1),
             "rest_hold_s": REST_HOLD_S,
+            "comfort_max_clicks_past_touch": COMFORT_MAX_CLICKS,
+            "comfort_max_dial_clicks": COMFORT_MAX_DIAL_CLICKS,
         },
         "key_figures": list(KEY_FIGURES),
     }

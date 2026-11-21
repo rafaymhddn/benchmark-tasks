@@ -161,12 +161,31 @@ def test_level_and_half_tight_scores_half():
 
 def test_level_and_clamped_scores_one_after_one_second_hold():
     _reset_offline()
-    # Before 20 steps (1.0 s), score stays 0.0; at >= 20 steps (1.0 s), score reaches 1.0
-    s_short = _step_state(tilt_deg=0.0, dial_deg=260.0, band_force_n=27.9, steps=15)
+    # Before 20 steps (1.0 s), score stays 0.0; at >= 20 steps (1.0 s), score reaches 1.0 (10.5 clicks: inside the bound)
+    s_short = _step_state(tilt_deg=0.0, dial_deg=210.0, band_force_n=27.9, steps=15)
     assert s_short == 0.0
-    s_full = _step_state(tilt_deg=0.0, dial_deg=260.0, band_force_n=27.9, steps=6)
+    s_full = _step_state(tilt_deg=0.0, dial_deg=210.0, band_force_n=27.9, steps=6)
     assert s_full == 1.0
     assert T.success(T.OBJECTS) is True
+
+
+def test_overtightened_past_comfort_bound_scores_half():
+    # The upper tightness check: clamped at the fit with the dial at most COMFORT_MAX_CLICKS (4) past the band's first
+    # touch (PRETOUCH_CLICKS = 7 from the open stop, so 11 clicks, 220 deg) is 1.0; turned past it, still clamped (the
+    # 10 N pull holds), it is 0.5. Tipped back, overtightened is 0.0 (the gap rule).
+    assert P.COMFORT_MAX_DIAL_CLICKS == P.PRETOUCH_CLICKS + P.COMFORT_MAX_CLICKS == 11
+    assert P.CLAMP_CLICKS < P.COMFORT_MAX_CLICKS < P.DIAL_TRAVEL_CLICKS - P.PRETOUCH_CLICKS  # full credit reachable, overtight too
+    at_bound = P.COMFORT_MAX_DIAL_CLICKS * P.DIAL_CLICK_DEG
+    _reset_offline()
+    assert _step_state(tilt_deg=2.6, dial_deg=at_bound, band_force_n=41.0, steps=25) == 1.0
+    assert T.within_comfort_bound() and T.helmet_clamped() and math.isclose(L.clicks_past_touch(), 4.0, abs_tol=1e-9)
+    for over_deg, bf in ((at_bound + 5.0, 44.0), (260.0, 62.0), (P.DIAL_TRAVEL_DEG, 70.0)):
+        _reset_offline()
+        assert _step_state(tilt_deg=2.6, dial_deg=over_deg, band_force_n=bf, steps=25) == 0.5
+        assert T.helmet_clamped() and not T.within_comfort_bound() and T.gap_in_fit_window()
+        assert T.report()["within_comfort_bound"] is False
+    _reset_offline()
+    assert _step_state(tilt_deg=P.TILT_START_DEG, dial_deg=260.0, band_force_n=62.0, steps=25) == 0.0
 
 
 def test_dial_tightens_one_way_and_loosens_only_by_hand():
@@ -358,11 +377,14 @@ def test_checklist_52_sizes_and_texts_agree():
     assert len(source) <= 15_000 and "def score(" in source
     assert len(spec["title"]) <= 120 and len(spec["context"]) <= 1000 and len(spec["fidelity"]) <= 500
     assert spec["scores"] == "Dream-1 run: pending; demo: 1.0"
-    assert spec["instruction"] == T.INSTRUCTION
+    assert spec["instruction"] == T.INSTRUCTION and "no more than four clicks" in T.INSTRUCTION
+    assert spec["category"] == "Societal relatability"
     assert spec["run_limit"].startswith(f"{T.RUN_LIMIT_STEPS:,} steps ({T.RUN_LIMIT_STEPS / 20:g} s at 20 Hz)")
     for text in (spec["scoring"], readme):  # the same numbers in task.py (parts.py), task.json and the README
         for number in (f"{1000 * P.GAP_MIN:.0f} to {1000 * P.GAP_MAX:.0f} mm", f"{P.CLAMP_N:.0f} N", f"{P.PULL_TEST_N:.0f} N",
-                       f"{1000 * P.GRIPPER_CLEAR_M:.0f} mm", f"{1000 * P.MAX_HEAD_SHIFT_M:.0f} mm", "1.0 s"):
+                       f"{1000 * P.GRIPPER_CLEAR_M:.0f} mm", f"{1000 * P.MAX_HEAD_SHIFT_M:.0f} mm", "1.0 s",
+                       f"{P.COMFORT_MAX_CLICKS} clicks past", f"{P.COMFORT_MAX_DIAL_CLICKS} clicks",
+                       f"{P.COMFORT_MAX_DIAL_CLICKS * P.DIAL_CLICK_DEG:.0f} deg", f"EN 960 size {P.HEADFORM_EN960_SIZE}"):
             assert number in text, number
     for doc_name, doc_txt in (("README.md", readme), ("task.json", spec_raw), ("parts.py", parts_src)):
         low = doc_txt.lower()

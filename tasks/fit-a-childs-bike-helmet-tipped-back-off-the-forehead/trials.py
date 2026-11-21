@@ -11,10 +11,11 @@ Runs back-to-back episodes in one simulator session (``only=`` picks some):
         then turning the dial tips the unheld helmet backward via ``DIAL_TILT_SHARE`` alone.
       - (b2) With full physics (``tip_back_enabled=True``), Right hand approaches and turns the dial while
         nobody holds the helmet; verifies the helmet tips back to its start stop and scores 0.0.
-  (c) ``held_and_clamped_holds``: Left hand tips the helmet to the fit and holds it while the dial is turned
-      past the clamp (to 12 clicks), then Left releases and holds clear >= 1.2 s -> verifies
-      score == 1.0, band_force >= CLAMP_N, 10 N upward front-edge pull moves edge < 5.0 mm, and -0.20 N m
-      reverse torque on the dial does not turn the pawl back.
+  (c) ``clamped_in_bound_then_overtight``: Left hand tips the helmet to the fit and holds it while the dial is turned
+      past the clamp but inside the comfort bound (to 10.5 clicks, 3.5 past touch), then Left releases and holds
+      clear >= 1.2 s -> verifies score == 1.0, band_force >= CLAMP_N, 10 N upward front-edge pull moves edge < 5.0 mm,
+      and -0.20 N m reverse torque on the dial does not turn the pawl back. Then, hands clear, the dial is turned on
+      to 13 clicks (6 past touch, over the bound of 4): still clamped (the pull holds) but scores 0.5.
   (d) ``half_tight_and_open_pull``: a half-tight helmet at the fit (just past first touch) stays when the hands
       release (score == 0.5), then slips > 5.0 mm under a 10 N upward front-edge pull (and an open helmet at the
       fit also moves > 5.0 mm under the pull).
@@ -261,7 +262,8 @@ def run_trial_b(emb, m, l_mod, mk_mod, q_left: dict[str, np.ndarray]) -> dict:
 
 
 def run_trial_c(emb, m, l_mod, mk_mod, q_left: dict[str, np.ndarray]) -> dict:
-    """(c) Held at the fit by Left hand and turned past CLAMP_CLICKS -> holds (1.0), 10 N pull (<5 mm) & pawl check."""
+    """(c) Held at the fit, turned past CLAMP_CLICKS inside the comfort bound -> 1.0, 10 N pull (<5 mm) & pawl check;
+    then turned on past the bound -> clamped but 0.5."""
     from inspect_robots import Scene
 
     emb.reset(Scene(id="trial_c", instruction=m.INSTRUCTION), seed=0)
@@ -270,9 +272,9 @@ def run_trial_c(emb, m, l_mod, mk_mod, q_left: dict[str, np.ndarray]) -> dict:
     # 1. Left hand presses the helmet forward to the fit (gap about 26 mm) and holds
     _press_to_fit(emb, q_left, qr, 1.0)
 
-    # 2. Tighten the dial past the clamp (to 12 clicks, 240 deg, as the demo) while Left holds the helmet at the fit
+    # 2. Tighten the dial past the clamp but inside the comfort bound (to 10.5 clicks, 210 deg) while Left holds the fit
     d_ax = P.dial_axis_world(0.0)
-    _drive_dial(emb, l_mod, _pack_action(q_left["t_fit"], 0.0, qr, 1.0), 240.0)
+    _drive_dial(emb, l_mod, _pack_action(q_left["t_fit"], 0.0, qr, 1.0), 210.0)
     _interp_arm(emb, q_left["t_fit"], 0.0, q_left["t_fit"], 0.0, qr, 1.0, qr, 1.0, 0.3)
 
     # 3. Release Left hand to READY and hold clear for 1.4 s (28 steps >= 20 steps) -> score == 1.0
@@ -302,16 +304,29 @@ def run_trial_c(emb, m, l_mod, mk_mod, q_left: dict[str, np.ndarray]) -> dict:
     dial_after_rev_deg = l_mod.dial_deg()
     dial_loss_deg = max(0.0, dial_before_rev_deg - min(dial_under_rev_deg, dial_after_rev_deg))
 
+    # 6. Overtightened: hands clear, the dial turned on to 13 clicks (260 deg, 6 past touch > 4), then 1.4 s at rest
+    rest = _pack_action(q_left["ready"], 1.0, qr, 1.0)
+    _drive_dial(emb, l_mod, rest, 260.0, tilt_deg=l_mod.tilt_deg())
+    res_over = _interp_arm(emb, q_left["ready"], 1.0, q_left["ready"], 1.0, qr, 1.0, qr, 1.0, 1.4)
+    score_over = float(res_over.info.get("score", 0.0))
+    over = {"dial_deg": round(l_mod.dial_deg(), 1), "clicks_past_touch": round(l_mod.clicks_past_touch(), 2),
+            "band_force_n": round(l_mod.band_force_n(), 2), "tilt_hold_nm": round(l_mod.tilt_hold_nm(), 3),
+            "gap_mm": round(1000.0 * m.gap_m(), 2), "clamped": m.helmet_clamped(),
+            "within_comfort_bound": m.within_comfort_bound(), "score": score_over}
+
     ok = bool(
         score_clamped == 1.0
         and GAP_MIN_MM <= gap_before_pull_mm <= GAP_MAX_MM
         and band_force_clamped_n >= P.CLAMP_N
         and edge_move_10n_mm < 1000.0 * P.PULL_MAX_MOVE_M
         and dial_loss_deg < 2.0
+        and over["clamped"] and not over["within_comfort_bound"] and GAP_MIN_MM <= over["gap_mm"] <= GAP_MAX_MM
+        and score_over == 0.5
     )
     return {
         "pass": ok,
         "score": score_clamped,
+        "clicks_past_touch": round((dial_before_rev_deg / P.DIAL_CLICK_DEG) - P.PRETOUCH_CLICKS, 2),
         "dial_deg": round(dial_before_rev_deg, 1),
         "clicks": round(dial_before_rev_deg / P.DIAL_CLICK_DEG, 2),
         "band_force_n": band_force_clamped_n,
@@ -320,6 +335,7 @@ def run_trial_c(emb, m, l_mod, mk_mod, q_left: dict[str, np.ndarray]) -> dict:
         "gap_under_10n_pull_mm": round(gap_under_10n_mm, 2),
         "clamped_10n_edge_move_mm": round(edge_move_10n_mm, 2),
         "pawl_reverse_0p20nm_loss_deg": round(dial_loss_deg, 2),
+        "overtight": over,
     }
 
 
@@ -554,7 +570,7 @@ def main() -> int:
     import mechkit as mk_mod
 
     trials = {"a": ("a_open_rocks_back", run_trial_a), "b": ("b_dial_twist_tips_unheld", run_trial_b),
-              "c": ("c_held_and_clamped_holds", run_trial_c), "d": ("d_half_tight_and_open_pull", run_trial_d),
+              "c": ("c_clamped_in_bound_then_overtight", run_trial_c), "d": ("d_half_tight_and_open_pull", run_trial_d),
               "e": ("e_band_press_vs_clicks", run_trial_e), "f": ("f_tightened_tipped_back", run_trial_f),
               "g": ("g_zero_rules", run_trial_g)}
     results = {name: run(emb, m, l_mod, mk_mod, q_left) for key, (name, run) in trials.items() if key in only}

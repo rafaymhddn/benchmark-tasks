@@ -26,8 +26,8 @@ from yam_arena.task_file import TABLE_TOP  # noqa: E402
 SCENE = "station"
 SCORE_OVER = "end"
 SUCCESS_HOLD_S = 0.10  # score() flips to 1.0 once the 1.0 s (20-step) rest hold completes
-INSTRUCTION = "Fit the helmet properly on the head form for a bike ride without touching its face or moving the head form, and let go."
-RUN_LIMIT_STEPS = 900  # 45 s at 20 Hz: about 2.7 times the scripted demo (run h4t2j: 336 steps)
+INSTRUCTION = "Fit the helmet properly on the head form for a bike ride, turning the rear dial no more than four clicks past the band's first touch on the head, without touching the face or moving the head form, and let go."
+RUN_LIMIT_STEPS = 900  # 45 s at 20 Hz: about 3.2 times the scripted demo (run h4d2: 282 steps)
 TOP = TABLE_TOP[SCENE]
 
 HEAD_START_POS = P.head_start_pos(TOP)
@@ -225,6 +225,12 @@ def helmet_clamped() -> bool:
     return bool(L.band_force_n() >= P.CLAMP_N - 1e-9 and L.tilt_hold_nm() >= P.PULL_MOMENT_NM - 1e-9)
 
 
+def within_comfort_bound() -> bool:
+    """The upper tightness check: the dial at most COMFORT_MAX_CLICKS past the band's first touch, counted as the bench
+    counts it (from the open stop, less PRETOUCH_CLICKS): at most COMFORT_MAX_DIAL_CLICKS (220 deg) from the open stop."""
+    return bool(L.clicks_past_touch() <= P.COMFORT_MAX_CLICKS + 1e-9)
+
+
 def valid_end_posture() -> bool:
     return bool(
         STATE.get("zero_reason") is None
@@ -277,9 +283,9 @@ def score(objects) -> float:
         return 0.0
     if int(STATE.get("rest_steps", 0)) < 20 and float(STATE.get("rest_held_s", 0.0)) < P.REST_HOLD_S - 1e-9:
         return 0.0
-    if helmet_clamped():
+    if helmet_clamped() and within_comfort_bound():
         return 1.0
-    return 0.5
+    return 0.5  # level, but too loose for the pull or tightened past the comfort bound
 
 
 def success(objects) -> bool:
@@ -302,6 +308,7 @@ def report() -> dict:
         "peak_band_n": round(float(L.STATE.get("peak_band_n", 0.0)), 2),
         "tilt_hold_nm": round(L.tilt_hold_nm(), 3),
         "clamped": helmet_clamped(),
+        "within_comfort_bound": within_comfort_bound(),
         "max_head_shift_mm": round(float(STATE.get("max_head_shift_mm", 0.0)), 2),
         "face_touch_steps": int(STATE.get("face_touches", 0)),
         "gripper_min_clear_mm": round(1000.0 * gripper_min_clearance_m(), 2),

@@ -159,6 +159,7 @@ def dial_clicks() -> float:
 
 
 def clicks_past_touch() -> float:
+    """Clicks past the band's first touch as the bench counts them: from the open stop, less PRETOUCH_CLICKS."""
     return max(0.0, dial_clicks() - P.PRETOUCH_CLICKS)
 
 
