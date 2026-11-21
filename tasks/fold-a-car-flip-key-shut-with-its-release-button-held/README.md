@@ -1,6 +1,6 @@
 # Fold a car's flip key shut in the hands: release button held in, blade swung home until it latches
 
-Instruction given to the policy: `Fold the car key shut and put it back in the tray.`
+Instruction given to the policy: `Fold the car key shut while holding it clear of the tray and the bench, then put it back in the tray.`
 
 Files: `task.py` (scene, mechanism, rules, score), `mechkit.py` (the mechanism kit the task file imports), `demo.py`
 (the scripted full-score run), `demo_kit.py` (the runner behind it), `trials.py` (checks in the simulator with no

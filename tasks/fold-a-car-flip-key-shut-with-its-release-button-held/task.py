@@ -29,7 +29,7 @@ from yam_arena.task_file import TABLE_TOP  # noqa: E402
 SCENE = "station"
 SCORE_OVER = "end"
 SUCCESS_HOLD_S = 1.0
-INSTRUCTION = "Fold the car key shut and put it back in the tray."
+INSTRUCTION = "Fold the car key shut while holding it clear of the tray and the bench, then put it back in the tray."
 RUN_LIMIT_STEPS = 1900  # 95 s at 20 Hz: about three times the scripted full run (620 steps, 31.0 s, run w9e)
 TOP = TABLE_TOP[SCENE]
 GRAVITY = 9.81
