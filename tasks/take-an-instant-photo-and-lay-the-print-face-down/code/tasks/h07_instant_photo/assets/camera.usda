@@ -3,7 +3,7 @@
     defaultPrim = "camera"
     metersPerUnit = 1
     upAxis = "Z"
-    doc = "A Polaroid Go Generation 2 instant camera as modelled (outer size from the maker's page, no name or logo): a body with the lens in front, a tunnel along its floor that ends in the slot in the front face, and the red shutter button on the top on a sprung prismatic joint"
+    doc = "A Polaroid Go Generation 2 instant camera as modelled (outer size from the maker's page, no name or logo): a body with the lens in front, a tunnel along its floor that ends in the slot in the front face, the film shield as a thin flap over the slot hinged at its upper lip, the rollers' nip as a block that closes behind the ejected print, and the red shutter button on the top on a sprung prismatic joint"
 )
 
 def Xform "camera"
@@ -12,7 +12,7 @@ def Xform "camera"
         prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI", "PhysicsArticulationRootAPI", "PhysxArticulationAPI"]
     )
     {
-        float physics:mass = 0.257
+        float physics:mass = 0.269
         bool physxArticulation:enabledSelfCollisions = 0
     def Mesh "shell"
     {
@@ -26,10 +26,10 @@ def Xform "camera"
     }
     def Mesh "slot"
     {
-        float3[] extent = [(0.0529, -0.033, 0.004), (0.0529, 0.033, 0.011)]
+        float3[] extent = [(0.0529, -0.033, 0.004), (0.0529, 0.033, 0.009)]
         int[] faceVertexCounts = [4]
         int[] faceVertexIndices = [0, 1, 2, 3]
-        point3f[] points = [(0.0529, -0.033, 0.004), (0.0529, 0.033, 0.004), (0.0529, 0.033, 0.011), (0.0529, -0.033, 0.011)]
+        point3f[] points = [(0.0529, -0.033, 0.004), (0.0529, 0.033, 0.004), (0.0529, 0.033, 0.009), (0.0529, -0.033, 0.009)]
         uniform token subdivisionScheme = "none"
         uniform bool doubleSided = 1
         rel material:binding = </camera/Looks/dark>
@@ -108,17 +108,51 @@ def Xform "camera"
         uniform token[] xformOpOrder = ["xformOp:translate"]
         rel material:binding = </camera/Looks/dark>
     }
-    def Cube "c_floor" (
+    def Mesh "lip"
+    {
+        float3[] extent = [(0.0525, -0.025, 0.004), (0.0585, 0.025, 0.005)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7, 3, 2, 1, 0, 4, 5, 6, 7]
+        point3f[] points = [(0.0585, -0.025, 0.004), (0.0585, 0.025, 0.004), (0.0525, 0.025, 0.004), (0.0525, -0.025, 0.004), (0.0585, -0.025, 0.005), (0.0585, 0.025, 0.005), (0.0525, 0.025, 0.005), (0.0525, -0.025, 0.005)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </camera/Looks/shell>
+    }
+    def Cube "c_feet" (
         prepend apiSchemas = ["PhysicsCollisionAPI"]
     )
     {
         double size = 1
         float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
-        double3 xformOp:translate = (0, 0, 0.0025)
-        float3 xformOp:scale = (0.105, 0.084, 0.005)
+        double3 xformOp:translate = (0, 0, 0.002)
+        float3 xformOp:scale = (0.105, 0.084, 0.004)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
         token visibility = "invisible"
         rel material:binding:physics = </camera/Looks/feet>
+    }
+    def Cube "c_guide" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        double size = 1
+        float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+        double3 xformOp:translate = (0.0125, 0, 0.0045)
+        float3 xformOp:scale = (0.08, 0.062, 0.001)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        token visibility = "invisible"
+        rel material:binding:physics = </camera/Looks/plastic>
+    }
+    def Cube "c_lip" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        double size = 1
+        float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+        double3 xformOp:translate = (0.0555, 0, 0.0045)
+        float3 xformOp:scale = (0.006, 0.05, 0.001)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        token visibility = "invisible"
+        rel material:binding:physics = </camera/Looks/plastic>
     }
     def Cube "c_upper" (
         prepend apiSchemas = ["PhysicsCollisionAPI"]
@@ -126,10 +160,11 @@ def Xform "camera"
     {
         double size = 1
         float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
-        double3 xformOp:translate = (0, 0, 0.036)
-        float3 xformOp:scale = (0.105, 0.084, 0.052)
+        double3 xformOp:translate = (0, 0, 0.035)
+        float3 xformOp:scale = (0.105, 0.084, 0.054)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
         token visibility = "invisible"
+        rel material:binding:physics = </camera/Looks/grip>
     }
     def Cube "c_left" (
         prepend apiSchemas = ["PhysicsCollisionAPI"]
@@ -137,10 +172,11 @@ def Xform "camera"
     {
         double size = 1
         float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
-        double3 xformOp:translate = (0, 0.0365, 0.0075)
-        float3 xformOp:scale = (0.105, 0.011, 0.005)
+        double3 xformOp:translate = (0, 0.0365, 0.006)
+        float3 xformOp:scale = (0.105, 0.011, 0.004)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
         token visibility = "invisible"
+        rel material:binding:physics = </camera/Looks/grip>
     }
     def Cube "c_right" (
         prepend apiSchemas = ["PhysicsCollisionAPI"]
@@ -148,10 +184,35 @@ def Xform "camera"
     {
         double size = 1
         float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
-        double3 xformOp:translate = (0, -0.0365, 0.0075)
-        float3 xformOp:scale = (0.105, 0.011, 0.005)
+        double3 xformOp:translate = (0, -0.0365, 0.006)
+        float3 xformOp:scale = (0.105, 0.011, 0.004)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
         token visibility = "invisible"
+        rel material:binding:physics = </camera/Looks/grip>
+    }
+    def Cube "c_left_skin" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        double size = 1
+        float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+        double3 xformOp:translate = (0.0125, 0.0315, 0.0065)
+        float3 xformOp:scale = (0.08, 0.001, 0.003)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        token visibility = "invisible"
+        rel material:binding:physics = </camera/Looks/plastic>
+    }
+    def Cube "c_right_skin" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        double size = 1
+        float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+        double3 xformOp:translate = (0.0125, -0.0315, 0.0065)
+        float3 xformOp:scale = (0.08, 0.001, 0.003)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        token visibility = "invisible"
+        rel material:binding:physics = </camera/Looks/plastic>
     }
     def Cube "c_back" (
         prepend apiSchemas = ["PhysicsCollisionAPI"]
@@ -159,10 +220,11 @@ def Xform "camera"
     {
         double size = 1
         float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
-        double3 xformOp:translate = (-0.04, 0, 0.0075)
-        float3 xformOp:scale = (0.025, 0.062, 0.005)
+        double3 xformOp:translate = (-0.04, 0, 0.006)
+        float3 xformOp:scale = (0.025, 0.062, 0.004)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
         token visibility = "invisible"
+        rel material:binding:physics = </camera/Looks/grip>
     }
     def Cube "c_lens" (
         prepend apiSchemas = ["PhysicsCollisionAPI"]
@@ -174,6 +236,7 @@ def Xform "camera"
         float3 xformOp:scale = (0.01, 0.033, 0.033)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
         token visibility = "invisible"
+        rel material:binding:physics = </camera/Looks/grip>
     }
     }
     def Xform "button" (
@@ -194,6 +257,7 @@ def Xform "camera"
         double3 xformOp:translate = (0, 0, 0)
         uniform token[] xformOpOrder = ["xformOp:translate"]
         rel material:binding = </camera/Looks/red>
+        rel material:binding:physics = </camera/Looks/grip>
     }
     }
     def PhysicsPrismaticJoint "shutter" (
@@ -212,6 +276,116 @@ def Xform "camera"
         uniform token drive:linear:physics:type = "force"
         float drive:linear:physics:stiffness = 2000
         float drive:linear:physics:damping = 5
+        float drive:linear:physics:targetPosition = 0
+    }
+    def Xform "flap" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        float physics:mass = 0.001
+        point3f physics:centerOfMass = (0.009, 0, 0.001)
+        double3 xformOp:translate = (0.0525, 0, 0.008)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    def Mesh "flap_drawn"
+    {
+        float3[] extent = [(0, -0.038, 0.0005), (0.018, 0.038, 0.0015)]
+        int[] faceVertexCounts = [4, 4, 4, 4, 4, 4]
+        int[] faceVertexIndices = [0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7, 3, 2, 1, 0, 4, 5, 6, 7]
+        point3f[] points = [(0.018, -0.038, 0.0005), (0.018, 0.038, 0.0005), (0, 0.038, 0.0005), (0, -0.038, 0.0005), (0.018, -0.038, 0.0015), (0.018, 0.038, 0.0015), (0, 0.038, 0.0015), (0, -0.038, 0.0015)]
+        uniform token subdivisionScheme = "none"
+        uniform bool doubleSided = 1
+        rel material:binding = </camera/Looks/shield>
+    }
+    def Cube "c_flap" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        double size = 1
+        float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+        double3 xformOp:translate = (0.009, 0, 0.001)
+        float3 xformOp:scale = (0.018, 0.076, 0.001)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        token visibility = "invisible"
+        rel material:binding:physics = </camera/Looks/plastic>
+    }
+    def Cylinder "ridge_drawn"
+    {
+        uniform token axis = "Y"
+        double height = 0.0539
+        double radius = 0.0005
+        float3[] extent = [(-0.0005, -0.02695, -0.0005), (0.0005, 0.02695, 0.0005)]
+        double3 xformOp:translate = (0.0045, 0, -4.33681e-19)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        rel material:binding = </camera/Looks/shield>
+    }
+    def Capsule "c_ridge" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        uniform token axis = "Y"
+        double height = 0.0529
+        double radius = 0.0005
+        float3[] extent = [(-0.0005, -0.02695, -0.0005), (0.0005, 0.02695, 0.0005)]
+        double3 xformOp:translate = (0.0045, 0, -4.33681e-19)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+        token visibility = "invisible"
+        rel material:binding:physics = </camera/Looks/nip>
+    }
+    }
+    def PhysicsRevoluteJoint "shield" (
+        prepend apiSchemas = ["PhysicsDriveAPI:angular"]
+    )
+    {
+        rel physics:body0 = </camera/body>
+        rel physics:body1 = </camera/flap>
+        uniform token physics:axis = "Y"
+        float physics:lowerLimit = -45
+        float physics:upperLimit = 3
+        point3f physics:localPos0 = (0.0525, 0, 0.008)
+        quatf physics:localRot0 = (1, 0, 0, 0)
+        point3f physics:localPos1 = (0, 0, 0)
+        quatf physics:localRot1 = (1, 0, 0, 0)
+        uniform token drive:angular:physics:type = "force"
+        float drive:angular:physics:stiffness = 0.000349066
+        float drive:angular:physics:damping = 3.49066e-05
+        float drive:angular:physics:targetPosition = 0
+    }
+    def Xform "nip" (
+        prepend apiSchemas = ["PhysicsRigidBodyAPI", "PhysicsMassAPI"]
+    )
+    {
+        float physics:mass = 0.002
+        double3 xformOp:translate = (0.041, 0, 0.0095)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    def Cube "c_nip" (
+        prepend apiSchemas = ["PhysicsCollisionAPI"]
+    )
+    {
+        double size = 1
+        float3[] extent = [(-0.5, -0.5, -0.5), (0.5, 0.5, 0.5)]
+        double3 xformOp:translate = (0, 0, 0)
+        float3 xformOp:scale = (0.002, 0.06, 0.003)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        token visibility = "invisible"
+        rel material:binding:physics = </camera/Looks/plastic>
+    }
+    }
+    def PhysicsPrismaticJoint "rollers" (
+        prepend apiSchemas = ["PhysicsDriveAPI:linear"]
+    )
+    {
+        rel physics:body0 = </camera/body>
+        rel physics:body1 = </camera/nip>
+        uniform token physics:axis = "Z"
+        float physics:lowerLimit = -0.003
+        float physics:upperLimit = 0
+        point3f physics:localPos0 = (0.041, 0, 0.0095)
+        quatf physics:localRot0 = (1, 0, 0, 0)
+        point3f physics:localPos1 = (0, 0, 0)
+        quatf physics:localRot1 = (1, 0, 0, 0)
+        uniform token drive:linear:physics:type = "force"
+        float drive:linear:physics:stiffness = 200
+        float drive:linear:physics:damping = 1.3
         float drive:linear:physics:targetPosition = 0
     }
     def Scope "Looks"
@@ -288,12 +462,51 @@ def Xform "camera"
                 token outputs:surface
             }
         }
+        def Material "shield"
+        {
+            token outputs:surface.connect = </camera/Looks/shield/Shader.outputs:surface>
+            def Shader "Shader"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.0343398, 0.0343398, 0.0395462)
+                float inputs:roughness = 0.5
+                float inputs:metallic = 0
+                token outputs:surface
+            }
+        }
         def Material "feet" (
             prepend apiSchemas = ["PhysicsMaterialAPI", "PhysxMaterialAPI"]
         )
         {
             float physics:staticFriction = 0.3
             float physics:dynamicFriction = 0.25
+            float physics:restitution = 0
+            uniform token physxMaterial:frictionCombineMode = "min"
+        }
+        def Material "grip" (
+            prepend apiSchemas = ["PhysicsMaterialAPI", "PhysxMaterialAPI"]
+        )
+        {
+            float physics:staticFriction = 1.2
+            float physics:dynamicFriction = 1
+            float physics:restitution = 0
+            uniform token physxMaterial:frictionCombineMode = "average"
+        }
+        def Material "plastic" (
+            prepend apiSchemas = ["PhysicsMaterialAPI", "PhysxMaterialAPI"]
+        )
+        {
+            float physics:staticFriction = 0.3
+            float physics:dynamicFriction = 0.3
+            float physics:restitution = 0
+            uniform token physxMaterial:frictionCombineMode = "min"
+        }
+        def Material "nip" (
+            prepend apiSchemas = ["PhysicsMaterialAPI", "PhysxMaterialAPI"]
+        )
+        {
+            float physics:staticFriction = 1
+            float physics:dynamicFriction = 1
             float physics:restitution = 0
             uniform token physxMaterial:frictionCombineMode = "min"
         }

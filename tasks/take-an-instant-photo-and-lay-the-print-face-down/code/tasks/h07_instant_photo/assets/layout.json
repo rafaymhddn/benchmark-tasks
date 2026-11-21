@@ -7,7 +7,7 @@
    0.065
   ],
   "top": 0.062,
-  "mass": 0.259,
+  "mass": 0.274,
   "front": 0.0525,
   "grip": [
    -0.032,
@@ -34,16 +34,63 @@
    0.25
   ],
   "box_centre": [
-   0.0054,
+   0.0088,
    0.0,
    0.0325
   ]
  },
  "tunnel": {
   "floor": 0.005,
-  "gap": 0.005,
+  "gap": 0.003,
   "depth": 0.08,
-  "width": 0.062
+  "width": 0.062,
+  "lip": 0.006,
+  "lip_width": 0.05
+ },
+ "shield": {
+  "hinge": [
+   0.0525,
+   0.0,
+   0.008
+  ],
+  "length": 0.018,
+  "thickness": 0.001,
+  "width": 0.076,
+  "plate": [
+   0.0005,
+   0.0015
+  ],
+  "ridge": 0.0045,
+  "ridge_rise": 0.0005,
+  "com": [
+   0.009,
+   0.0,
+   0.001
+  ],
+  "mass": 0.001,
+  "spring": 0.02,
+  "damping": 0.002,
+  "travel": [
+   -0.05236,
+   0.785398
+  ],
+  "friction": [
+   1.0,
+   0.3
+  ]
+ },
+ "rollers": {
+  "x": [
+   0.04,
+   0.042
+  ],
+  "travel": [
+   -0.003,
+   0.0
+  ],
+  "mass": 0.002,
+  "spring": 200.0,
+  "damping": 1.3
  },
  "print": {
   "size": [
@@ -51,17 +98,16 @@
    0.0539,
    0.0025
   ],
-  "mass": 0.005,
+  "mass": 0.0035,
   "hidden_x": 0.0078,
-  "protrude": 0.045,
-  "ejected_x": 0.0642
+  "inner": 0.01
  },
  "assets": {
   "camera": "h07_camera",
   "print": "h07_print"
  },
  "extent": {
-  "camera": 0.1166,
+  "camera": 0.1234,
   "print": 0.0666
  }
 }

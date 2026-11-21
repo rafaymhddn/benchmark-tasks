@@ -79,9 +79,12 @@ def across(pr):
     return np.column_stack([n, w, np.cross(n, w)])
 
 
-def snap(m, t, cam, pr, shutter_in=0.0, tcp=None, finger=None, tcp_rot=None):
+def snap(m, t, cam, pr, shutter_in=0.0, shield=0.0, tcp=None, finger=None, tcp_rot=None):
+    """``shield`` is the flap's angle in the lifted-up-positive convention (what ``shield_angle`` returns); the joint's
+    own positive is the free edge down, so it is stored negated."""
     return Snapshot({"camera": cam, "print": pr, "apple": apple(m)}, t=t, tcp=tcp or PARKED,
-                    finger=finger or {"left": -0.047, "right": -0.047}, joints={"camera": {"shutter": -shutter_in}},
+                    finger=finger or {"left": -0.047, "right": -0.047},
+                    joints={"camera": {"shutter": -shutter_in, "shield": -shield}},
                     tcp_rot=tcp_rot or {"left": DOWN, "right": DOWN})
 
 
@@ -91,14 +94,18 @@ def state(m):
 
 
 class World:
-    """What ``events`` sees: the step's objects and a pose setter that records."""
+    """What ``events`` sees: the step's objects, and a pose setter and a joint-target setter that record."""
 
     def __init__(self, objects):
         self.objects = objects
         self.set = {}
+        self.targets = {}
 
     def set_pose(self, name, pos, quat=None):
         self.set[name] = (np.asarray(pos, float), quat)
+
+    def set_joint_target(self, name, joint, target):
+        self.targets[(name, joint)] = float(target)
 
 
 # --- the start -----------------------------------------------------------------------------------------------------
@@ -132,15 +139,21 @@ def test_first_press_home_takes_the_photo(m, state):
     assert state["release_t"] is None  # still held down
 
 
-@pytest.mark.parametrize("how", ["tilted", "moving", "turned away"])
+@pytest.mark.parametrize("how", ["tilted", "moving", "turned away", "too near", "too far"])
 def test_first_press_home_off_the_shot_wastes_the_exposure(m, state, how):
     if how == "tilted":
         cam = camera(m, quat=quat_y(m.LEVEL_DEG + 3))
     elif how == "moving":
         cam = camera(m, vel=(1.5 * m.STEADY, 0.0, 0.0))
-    else:
+    elif how == "turned away":
         a = math.radians(m.AIM_DEG + 3) / 2
         cam = camera(m, quat=(0.0, 0.0, math.sin(a), math.cos(a)))
+    else:  # moved along its lens axis: the apple 10 % inside the near end of AIM_DIST, or 10 % past its far end
+        dist = m.aim({"camera": camera(m), "apple": apple(m)})[1]
+        to = 0.9 * m.AIM_DIST[0] if how == "too near" else 1.1 * m.AIM_DIST[1]
+        cam = camera(m, origin=(m.CAM_XY[0] + dist - to, m.CAM_XY[1], m.TOP))
+        angle, now = m.aim({"camera": cam, "apple": apple(m)})
+        assert angle < 1.0 and now == pytest.approx(to)
     s = snap(m, 3.0, cam, print_in(m, cam, m.HIDDEN_X), shutter_in=m.SHUTTER_TRAVEL)
     assert m.failure(s, state) == "wasted_exposure" and state["shot_t"] is None
     good = camera(m)
@@ -163,82 +176,192 @@ def test_print_comes_out_only_when_the_button_is_let_go(m, state):
     m.events(w.objects.t, state, w)
     half = (m.HIDDEN_X + m.EJECTED_X) / 2
     assert w.set["print"][0][0] == pytest.approx(m.to_world(cam, (half, 0, m.PRINT_Z))[0], abs=1e-6) and state["out_t"] is None
+    # placed on the tunnel's floor, picture side up; the shield stands CLEAR_RAD up (its weight taken off), the nip open
+    assert w.set["print"][0][2] == pytest.approx(m.TOP + m.FLOOR)
+    clear = m.CLEAR_RAD + m.shield_gravity(w.objects) / m.SHIELD_K
+    assert w.targets[("camera", "shield")] == pytest.approx(-clear) and w.targets[("camera", "rollers")] == m.NIP_OPEN
     w = World(snap(m, 4.5 + m.EJECT_S, cam, pr))
     m.events(w.objects.t, state, w)
-    assert state["out_t"] == pytest.approx(4.5 + m.EJECT_S)
+    assert state["out_t"] == pytest.approx(4.5 + m.EJECT_S) and w.targets[("camera", "rollers")] == m.NIP_SHUT
     assert w.set["print"][0][0] == pytest.approx(m.to_world(cam, (m.EJECTED_X, 0, m.PRINT_Z))[0], abs=1e-6)
-    # out of the slot by the protrusion, the last part still between the rollers
-    assert m.EJECTED_X + m.PRINT[0] / 2 - m.FRONT == pytest.approx(m.P["protrude"], abs=1e-4)
-    assert m.EJECTED_X - m.PRINT[0] / 2 < m.FRONT
+    assert state["shield_n"] == 0.0  # out: the press has not risen yet
 
 
 def ejected_state(m, state, out_t=10.0):
-    state.update(shot_t=out_t - m.EJECT_S - 1.0, release_t=out_t - m.EJECT_S, out_t=out_t, _came_out=True, depth=m.EJECTED_X)
+    state.update(shot_t=out_t - m.EJECT_S - 1.0, release_t=out_t - m.EJECT_S, out_t=out_t, came_out=True,
+                 _depth=m.EJECTED_X, _depth_t=out_t)
     return state
 
 
-# --- the rollers ---------------------------------------------------------------------------------------------------
-def test_rollers_hold_an_unpinched_print_wherever_the_camera_goes(m, state):
+# --- the shield and the rollers' nip -------------------------------------------------------------------------------
+def pull_to(m, state, cam, depth, t, **kw):
+    """One control step of ``events`` with the print's centre at ``depth`` along the slot (where physics left it)."""
+    w = World(snap(m, t, cam, print_in(m, cam, depth), **kw))
+    m.events(t, state, w)
+    return w
+
+
+def pressing(m, w, state):
+    """The torque (N m) pressing the flap's free edge down: its spring's, K (angle - rest), and its own weight's."""
+    return m.SHIELD_K * (m.shield_angle(w.objects) - state["shield_rest"]) + m.shield_gravity(w.objects)
+
+
+def test_the_ridge_presses_the_print_over_the_lip_and_the_nip_closes_behind_it(m):
+    """Once out the print's inner end is INNER inside the front face; the ridge's line lies over the print and over the
+    slot's lower lip (the press has the lip right under it); the shield reaches past the print's edges (a fingertip
+    finds it beside the print); the nip's block lies behind the print's inner end, and up in the roof while open."""
+    out_inner, lip, ridge = m.EJECTED_X - m.PRINT[0] / 2, m.T["lip"], m.FRONT + m.S["ridge"]
+    assert out_inner == pytest.approx(m.FRONT - m.INNER) and m.PROTRUDE == pytest.approx(m.PRINT[0] - m.INNER)
+    assert out_inner < ridge < m.FRONT + lip and m.S["hinge"][0] == pytest.approx(m.FRONT)
+    assert m.L["shield"]["width"] / 2 - m.PRINT[1] / 2 >= 0.009 and m.T["lip_width"] < m.PRINT[1]
+    lo, hi = m.R["x"]
+    assert hi < out_inner and out_inner - hi == pytest.approx(0.0005)
+    assert m.FLOOR + m.T["gap"] >= m.FLOOR + m.PRINT[2]  # open, the block's underside (the roof) is over a print inside
+    assert m.NIP_SHUT < m.R["travel"][0] and m.NIP_OPEN > m.R["travel"][1]  # pressed onto either stop
+
+
+def test_forces_are_equal_and_opposite_and_none_once_out(m, state):
+    """While the rules place the print its weight is carried, the reaction on the camera; once it is out no force is
+    pushed on either (both named, so nothing lingers): what holds it is the shield's contact friction, applied to the
+    print and, opposite, to the camera through the hinge and the lip."""
+    cam = camera(m)
+    inside = m.forces(snap(m, 3.0, cam, print_in(m, cam, m.HIDDEN_X)), state)
+    assert np.allclose(inside["print"], -np.asarray(inside["camera"])) and inside["print"][2] == pytest.approx(m.P["mass"] * 9.81)
+    ejected_state(m, state)
+    for t, depth in ((12.0, m.EJECTED_X), (13.0, m.EJECTED_X + 0.01), (14.0, m.EJECTED_X + 0.03)):
+        f = m.forces(snap(m, t, cam, print_in(m, cam, depth)), state)
+        assert f == {"print": (0.0, 0.0, 0.0), "camera": (0.0, 0.0, 0.0)}
+
+
+def test_shield_press_rises_once_the_print_is_out(m, state):
+    ejected_state(m, state)
+    cam = camera(m)
+    pull_to(m, state, cam, m.EJECTED_X, state["out_t"] + m.SHIELD_RAMP_S / 2)
+    assert m.SHIELD_MU * state["shield_n"] == pytest.approx(m.HOLD_N / 2)
+    pull_to(m, state, cam, m.EJECTED_X, state["out_t"] + m.SHIELD_RAMP_S)
+    assert m.SHIELD_MU * state["shield_n"] == pytest.approx(m.HOLD_N)
+
+
+@pytest.mark.parametrize("turned", ["standing", "lens up", "tilted"])
+def test_the_ridge_presses_with_the_set_force_however_the_flap_sits_and_the_camera_turns(m, state, turned):
+    """The spring's rest is set under the flap's angle so that its torque and the flap's own weight press the ridge
+    with the set force wherever the flap sits and however the camera is turned: press x PRESS_LEVER about the hinge,
+    the rod's 4.5 mm plus the hinge's 0.5 mm over the print times the rod's friction (a pull on the print drags the rod
+    outward, which turns the flap up: so the press is the set one when the print starts to slide)."""
+    ejected_state(m, state)
+    quat = {"standing": (0, 0, 0, 1.0), "lens up": quat_y(-90), "tilted": quat_y(-35)}[turned]
+    cam = camera(m, origin=(0.25, 0.05, m.TOP + 0.08), quat=quat)
+    for lifted in (0.0, 0.01, -0.02):
+        w = World(snap(m, 12.0, cam, print_in(m, cam, m.EJECTED_X), shield=lifted))
+        m.events(w.objects.t, state, w)
+        assert pressing(m, w, state) == pytest.approx(m.HOLD_N / m.SHIELD_MU * m.PRESS_LEVER)
+    hinge_over_print = m.S["hinge"][2] - (m.FLOOR + m.PRINT[2])
+    assert m.PRESS_LEVER == pytest.approx(m.S["ridge"] + hinge_over_print * m.S["friction"][0])
+
+
+def test_once_out_nothing_places_the_print_wherever_the_camera_goes(m, state):
     ejected_state(m, state)
     tipped = camera(m, origin=(0.25, 0.05, m.TOP + 0.08), quat=quat_y(-90))  # lifted, the lens turned up
-    drifted = m.to_world(tipped, (m.EJECTED_X - 0.003, 0.002, m.PRINT_Z + 0.002))  # where physics left it this step
-    pr = print_at(m, drifted, tipped.quat_xyzw)
-    w = World(snap(m, 12.0, tipped, pr))
-    m.events(12.0, state, w)
-    want = m.to_world(tipped, (m.EJECTED_X, 0, m.PRINT_Z))
-    assert np.allclose(w.set["print"][0], want) and not state["loose"]
+    w = pull_to(m, state, tipped, m.EJECTED_X, 12.0)
+    assert "print" not in w.set and state["freed_t"] is None  # held by the shield, not placed
+    assert w.targets[("camera", "rollers")] == m.NIP_SHUT  # the nip closed behind it: it rests on it when let go
 
 
-def test_pinched_print_is_left_to_the_gripper_and_freed_once_out(m, state):
+def test_a_pinch_without_lifting_the_shield_frees_nothing(m, state):
     ejected_state(m, state)
     cam = camera(m)
     pr = print_in(m, cam, m.EJECTED_X)
-    tcp = {"left": PARKED["left"], "right": tuple(pr.pos)}
-    pinch = {"left": -0.047, "right": -0.001}
-    # squeezed by its two side edges from above (the closing line along its width): the rollers keep it
-    w = World(snap(m, 12.0, cam, pr, tcp=tcp, finger=pinch, tcp_rot={"left": DOWN, "right": DOWN}))
-    m.events(12.0, state, w)
-    assert "print" in w.set and not state["loose"]
-    # pinched across its faces: left to the gripper
-    w = World(snap(m, 12.05, cam, pr, tcp=tcp, finger=pinch, tcp_rot={"left": DOWN, "right": across(pr)}))
-    m.events(12.05, state, w)
-    assert "print" not in w.set and not state["loose"]
-    out = print_in(m, cam, m.FRONT + m.PRINT[0] / 2 + 0.002)  # drawn clear of the slot
-    w = World(snap(m, 13.0, cam, out, tcp={"left": PARKED["left"], "right": tuple(out.pos)}, finger=pinch,
-                   tcp_rot={"left": DOWN, "right": across(out)}))
-    m.events(13.0, state, w)
-    assert state["loose"] and state["freed_t"] == 13.0
+    pinch = dict(tcp={"left": PARKED["left"], "right": tuple(pr.pos)}, finger={"left": -0.047, "right": -0.001},
+                 tcp_rot={"left": DOWN, "right": across(pr)})
+    for k in range(20):  # a second of a firm pinch across its faces, the shield still down
+        w = pull_to(m, state, cam, m.EJECTED_X, 12.0 + 0.05 * k, **pinch)
+    assert state["freed_t"] is None and not state["sliding"] and "print" not in w.set
+    assert m.SHIELD_MU * state["shield_n"] == pytest.approx(m.HOLD_N)  # still held with the full hold
 
 
-def test_rollers_drag_the_camera_while_the_print_is_pulled(m, state):
+def test_the_shield_grips_with_the_hold_while_still_and_the_drag_while_sliding(m, state):
+    """The shield's friction (SHIELD_MU x its press) is HOLD_N while the print is still, so a pull below HOLD_N cannot
+    start it; DRAG_N while it slides; and back to HOLD_N when it stops. The shield turns about the camera's y and the
+    nip moves along its z, so nothing the rules do can push the print along the slot."""
+    ejected_state(m, state)
+    cam, dt = camera(m), 0.05
+    depths = [m.EJECTED_X] * 3 + [m.EJECTED_X + 0.0015 * k for k in range(1, 6)] + [m.EJECTED_X + 0.0075] * 3
+    grips = []
+    for k, d in enumerate(depths):
+        pull_to(m, state, cam, d, 12.0 + dt * k)
+        grips.append(m.SHIELD_MU * state["shield_n"])
+    assert grips[:3] == pytest.approx([m.HOLD_N] * 3)
+    assert grips[3:8] == pytest.approx([m.DRAG_N] * 5)  # 3 cm/s out: sliding
+    assert grips[-2:] == pytest.approx([m.HOLD_N] * 2)  # stopped: held again
+    assert state["freed_t"] is None  # the shield still down: the print is still held
+    usda = (TASK.parent / "assets" / "camera.usda").read_text()
+    for kind, name, axis, lo, hi in (("Revolute", "shield", "Y", -45, 3), ("Prismatic", "rollers", "Z", -m.T["gap"], 0)):
+        joint = usda[usda.index(f'def Physics{kind}Joint "{name}"'):]
+        joint = joint[:joint.index("}")]
+        assert f'physics:axis = "{axis}"' in joint and f"lowerLimit = {lo:.6g}" in joint and f"upperLimit = {hi:.6g}" in joint
+
+
+def test_a_print_pushed_about_in_its_slot_cannot_lift_the_shield(m):
+    """The slot leaves the print 0.5 mm of play: pushed up against the rod (a pinch closing on it), its 10 mm inside can
+    tilt it at most that much over its length, so the rod rises at most about 0.7 mm: some 9 degrees of the shield,
+    well short of LIFT_DEG. Only a lift of the shield itself frees the print."""
+    play = m.T["gap"] - m.PRINT[2]
+    rise = play + m.S["ridge"] * play / m.INNER
+    assert math.degrees(math.asin(rise / m.S["ridge"])) < 0.7 * m.LIFT_DEG
+
+
+def test_a_touch_below_the_angle_frees_nothing(m, state):
     ejected_state(m, state)
     cam = camera(m)
-    tcp = {"left": PARKED["left"], "right": tuple(print_in(m, cam, m.EJECTED_X).pos)}
-    pinch = {"left": -0.047, "right": -0.001}
-    for v, want in ((2 * m.RETAIN_V, m.RETAIN_N), (m.RETAIN_V / 2, m.RETAIN_N / 2), (-m.RETAIN_V, 0.0)):
-        pr = print_at(m, print_in(m, cam, m.EJECTED_X).pos, vel=(v, 0.0, 0.0))
-        rot = {"left": DOWN, "right": across(pr)}
-        f = m.forces(snap(m, 12.0, cam, pr, tcp=tcp, finger=pinch, tcp_rot=rot), state)
-        assert f["camera"] == pytest.approx((want, 0.0, 0.0), abs=1e-9) and f["print"] == (0.0, 0.0, 0.0)  # the hand has it
-    unpinched = print_at(m, print_in(m, cam, m.EJECTED_X).pos, vel=(0.05, 0.0, 0.0))
-    f = m.forces(snap(m, 12.0, cam, unpinched), state)  # in the rollers' hold: no drag, its weight carried
-    assert f["camera"] == (0.0, 0.0, 0.0) and f["print"] == pytest.approx((0.0, 0.0, m.P["mass"] * m.GRAVITY))
-    state["loose"] = True  # drawn free: nothing on either, every step (a pushed force stays until the next push)
-    assert m.forces(snap(m, 14.0, cam, unpinched), state) == {"camera": (0.0, 0.0, 0.0), "print": (0.0, 0.0, 0.0)}
+    for a in (0.0, m.LIFT_RAD * 0.5, m.LIFT_RAD - 0.001):
+        pull_to(m, state, cam, m.EJECTED_X, 12.0, shield=a)
+    assert state["freed_t"] is None and m.SHIELD_MU * state["shield_n"] == pytest.approx(m.HOLD_N)
 
 
-def test_unheld_camera_slides_under_the_drag(m):
-    """The README's claim: the drag (1.5 N) is more than the friction that keeps the camera in place."""
+def test_lifting_the_shield_past_the_angle_rolls_it_back_and_frees_the_print(m, state):
+    """The hold ends only when the shield is up: past LIFT_RAD the spring's rest goes up past the upper stop (by at most
+    STOW_STEP from the flap's angle), it rolls back and the press is gone."""
+    ejected_state(m, state)
+    cam = camera(m)
+    pull_to(m, state, cam, m.EJECTED_X, 12.0, shield=m.LIFT_RAD - 0.01)
+    assert state["freed_t"] is None
+    w = pull_to(m, state, cam, m.EJECTED_X, 12.05, shield=m.LIFT_RAD + 0.01)
+    assert state["freed_t"] == 12.05 and state["shield_n"] == 0.0  # nothing presses the print any more
+    up = m.SHIELD_UP + math.radians(5)  # 5 degrees past the upper stop: the spring holds it there
+    assert state["shield_rest"] == pytest.approx(min(m.LIFT_RAD + 0.01 + m.STOW_STEP, up))  # rolling back
+    pull_to(m, state, cam, m.EJECTED_X + 0.03, 13.0, shield=m.SHIELD_UP)  # rolled back; the print drawn out
+    assert state["shield_rest"] == pytest.approx(up) and state["freed_t"] == 12.05
+
+
+@pytest.mark.parametrize("turned", ["standing", "lens up"])
+def test_every_shield_target_stays_within_45_degrees_of_its_angle(m, state, turned):
+    """A PhysX drive pulls in proportion to its error only within about 45 degrees: every rest angle the rules set lies
+    within that of the flap's angle, at any angle between its stops, placed, pressing, sliding or rolling back."""
+    quat = (0, 0, 0, 1.0) if turned == "standing" else quat_y(-90)
+    cam = camera(m, origin=(0.25, 0.05, m.TOP + 0.08), quat=quat)
+    lo, hi = m.S["travel"]
+    for phase in ("placed", "still", "sliding", "freed"):
+        for a in np.linspace(lo, hi, 25):
+            st = m.setup(np.random.default_rng(0), Trial(scene_id="seed-0", init_seed=0, seed=0))
+            if phase != "placed":
+                ejected_state(m, st)
+            st.update(sliding=phase == "sliding", freed_t=11.0 if phase == "freed" else None)
+            w = World(snap(m, 12.0, cam, print_in(m, cam, m.EJECTED_X), shield=float(a)))
+            rest = m.shield_rest(12.0, st, w.objects)
+            assert abs(rest - a) < math.radians(45.0), (phase, math.degrees(a), math.degrees(rest))
+
+
+def test_the_shields_hold_is_lighter_than_the_cameras_stand(m):
+    """The shield's hold and drag are less than the friction that keeps an unheld camera in place on the bench."""
     weight = m.C["mass"] * 9.81
-    assert m.RETAIN_N > m.C["foot_friction"][0] * weight > m.C["foot_friction"][1] * weight
+    static, moving = (mu * weight for mu in m.C["foot_friction"])
+    assert m.HOLD_N < static and m.DRAG_N < moving
 
 
 # --- the end -------------------------------------------------------------------------------------------------------
-
-
 def ended(m, state, freed_after, print_quat=FACE_DOWN, cam_quat=(0, 0, 0, 1.0), print_xy=(0.36, -0.04), tcp=None):
     ejected_state(m, state)
-    state.update(loose=True, freed_t=state["out_t"] + freed_after)
+    state.update(freed_t=state["out_t"] + freed_after)
     cam = camera(m, quat=cam_quat)
     pr = print_at(m, (print_xy[0], print_xy[1], m.TOP + m.PRINT[2] / 2), print_quat)
     return snap(m, 40.0, cam, pr, tcp=tcp)
@@ -252,6 +375,20 @@ def test_full_score_end(m, state):
 def test_drawn_out_before_the_shield_wait_stops_at_three_quarters(m, state):
     s = ended(m, state, freed_after=m.SHIELD_S - 0.2)
     assert m.milestones(s, state) == [True, True, True, False]
+
+
+def test_drawn_at_once_then_the_empty_shield_flicked_up_scores_three_quarters(m, state, task):
+    """The maker's order (a reader's probe): a pull over HOLD_N draws the print from under the lowered shield at once;
+    the empty shield flicked up at out + 6 s does not count: laid face down, camera standing, 0.75."""
+    ejected_state(m, state)
+    cam = camera(m)
+    pull_to(m, state, cam, m.EJECTED_X + 0.07, 12.0)  # drawn free from under the shield, still down
+    pull_to(m, state, cam, m.EJECTED_X + 0.07, 16.0, shield=m.LIFT_RAD + 0.01)  # then flicked up
+    assert state["drawn_t"] == 12.0 and state["freed_t"] == 16.0 == state["out_t"] + 6.0
+    s = snap(m, 40.0, cam, print_at(m, (0.36, -0.04, m.TOP + m.PRINT[2] / 2), FACE_DOWN))
+    flags = m.milestones(s, state)
+    assert flags == [True, True, True, False] and not m.success(s, state)
+    assert run_steps(task, [(flags, False)] * 80)[-1] == (0.75, False)
 
 
 def test_face_up_or_on_edge_is_not_face_down(m, state):

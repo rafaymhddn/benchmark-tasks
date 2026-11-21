@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import numpy as np
 
@@ -279,8 +280,9 @@ def articulated_state(env, name: str):
 def articulated_asset_object(spec, joints: dict) -> Object:
     """A free model whose USD file is an articulation (links and joints authored in the file, e.g. a camera body with
     a sprung shutter button on a prismatic joint), placed as a library asset is. ``joints``: {joint name: (stiffness,
-    damping)}: an implicit actuator holds each joint at 0 with that spring (N/m or N m/rad) and damping; the links'
-    masses come from the file. The joints' positions reach the task as ``Snapshot.joints[name]``."""
+    damping)}: an implicit actuator holds each joint at 0 with that spring (N/m or N m/rad) and damping, unless the
+    task's events move the spring's rest point (``World.set_joint_target``); the links' masses come from the file.
+    The joints' positions reach the task as ``Snapshot.joints[name]``."""
     from isaaclab.actuators import ImplicitActuatorCfg
 
     rigid = task_object(spec)  # the same model as a rigid library item: its file, scale and initial pose
@@ -296,8 +298,21 @@ def articulated_asset_object(spec, joints: dict) -> Object:
             cfg.actuators = {j: ImplicitActuatorCfg(joint_names_expr=[j], stiffness=k, damping=c) for j, (k, c) in joints.items()}
             return cfg
 
+    addon = {"collision_props": _contact_props()}
+    if not binds_own_physics_materials(rigid.usd_path):
+        addon["physics_material"] = _grippy()  # the rubbery default; Isaac Lab binds it over every collider of the model
     return ArticulatedAsset(name=spec.name, usd_path=rigid.usd_path, object_type=ObjectType.ARTICULATION, scale=rigid.scale,
-                            initial_pose=rigid.initial_pose, spawn_cfg_addon={"physics_material": _grippy(), "collision_props": _contact_props()})
+                            initial_pose=rigid.initial_pose, spawn_cfg_addon=addon)
+
+
+def binds_own_physics_materials(usd_path) -> bool:
+    """Whether a model's file binds physics materials to its colliders itself (a camera's feet, its tunnel's floor,
+    the pad of its rollers). Then the spawner binds none: Isaac Lab binds a spawner's material over every collider of
+    the model, its own bindings included."""
+    try:
+        return "material:binding:physics" in Path(usd_path).read_text(errors="ignore")
+    except OSError:
+        return False
 
 
 def memory_object(spec, joints: dict | None = None) -> Object:

@@ -9,7 +9,8 @@ import numpy as np
 
 class World:
     """What ``events()`` may do: ``set_pose`` teleports a free object (and zeroes its velocity); ``push`` holds an
-    external force on one (the embodiment does this with a task's ``forces()``); ``show`` makes a
+    external force on one (the embodiment does this with a task's ``forces()``); ``set_joint_target`` moves the rest
+    point of an articulated model's joint spring (a pad pressed onto something, a latch let go); ``show`` makes a
     named part of a model visible or invisible (a display's screens, a status light); ``pose(name)`` /
     ``objects`` read where things are as of the last control step (so a prop can be re-picked where physics left
     it). Before the first step ``objects`` is None and ``pose`` raises."""
@@ -55,6 +56,21 @@ class World:
         f = torch.tensor(np.asarray(force, dtype=np.float64), dtype=torch.float32, device=self._origin.device)
         f = f.view(1, 1, 3).repeat(obj.num_instances, 1, 1)
         obj.permanent_wrench_composer.set_forces_and_torques_index(forces=f, torques=torch.zeros_like(f), body_ids=body_ids, is_global=True)
+
+    def set_joint_target(self, name: str, joint: str, target: float) -> None:
+        """Move the rest point of the spring that holds ``joint`` of the articulated model ``name`` (a task's
+        ``JOINTS``) to ``target`` (m or rad from where the joint is drawn): from the next physics step on the spring
+        pulls the joint towards it, until it is set again or the episode is reset (which sets it back to 0)."""
+        torch = self._torch
+        scene = self._base.scene
+        if name not in scene.articulations or name.endswith("_robot"):
+            raise KeyError(f"{name!r} is not an articulated model of the task")
+        art = scene[name]
+        names = list(art.data.joint_names)
+        if joint not in names:
+            raise KeyError(f"{name!r} has no joint {joint!r} (it has {names})")
+        value = torch.full((art.num_instances, 1), float(target), dtype=torch.float32, device=self._origin.device)
+        art.actuators.target_command.set_position_index(value=value, joint_ids=[names.index(joint)])
 
     def show(self, name: str, part: str, visible: bool = True) -> None:
         """Show or hide ``part`` (a child prim of the model spawned as ``name``): which screen a display shows,
