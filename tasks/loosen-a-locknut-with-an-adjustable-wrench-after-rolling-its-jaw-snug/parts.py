@@ -89,7 +89,7 @@ SCREW_ABOVE = 17.0 * MM
 WASHER_D, WASHER_T = 30.0 * MM, 2.5 * MM  # DIN 9021 M10 washer: 30 mm across, 2.5 mm thick
 NUT_XY = (0.280, 0.060)
 NUT_GAP = 0.3 * MM  # the nut hangs 0.3 mm over the washer: its hinge carries it, so no washer friction adds to its torque
-HANDLE_START_DEG = -150.0  # the handle points back and right, towards the right arm's base
+HANDLE_START_DEG = 210.0  # deg counter-clockwise from +x seen from above: back and to the right, towards the right arm's base
 TILT_GAP = 0.3 * MM  # the wrench is built this far over its supports and settles onto them
 
 # --- Rules (task.py) ----------------------------------------------------------------------------------------------
@@ -104,6 +104,9 @@ HANDS_CLEAR_M = 0.030
 TIGHTEN_LIMIT_DEG = -10.0
 REST_MOVE_M, REST_TURN_DEG, REST_HOLD_S = 0.001, 0.5, 1.0  # still: within 1 mm and 0.5 deg for 1.0 s
 ON_PLATE_M = 0.020  # the jaws' middle and the handle's end at most 20 mm over the plate: lying on it
+SEAT_GAP = 0.5 * MM  # each jaw face within 0.5 mm of the flat facing it: the real trial's 0.5 mm feeler gauge (17.5 less 17.0 mm)
+SEAT_COVER = 3.0 * MM  # estimate: the jaws on at least 3 mm of the hex's 8 mm flats (5.9 mm with the head on the washer), so a
+# wrench raised 3 mm off the nut no longer counts as on it
 
 STEEL, DARK, BLACK, ZINC = (0.20, 0.21, 0.23), (0.30, 0.31, 0.33), (0.07, 0.07, 0.08), (0.86, 0.86, 0.80)  # STEEL: the 8071's black phosphate
 PLATE_COLOR, MARK, BLUE = (0.30, 0.42, 0.55), (0.98, 0.86, 0.10), (0.12, 0.35, 0.85)  # a painted plate, for contrast
@@ -258,6 +261,33 @@ def to_capsule(p, a, b, r: float) -> float:
     ab = b - a
     t = float(np.clip(np.dot(p - a, ab) / max(float(np.dot(ab, ab)), 1e-12), 0.0, 1.0))
     return float(np.linalg.norm(p - (a + t * ab))) - r
+
+
+def nut_outline() -> np.ndarray:
+    """The 12 corners of the nut's outline in its frame (m), as ``nut_shapes()`` builds it: the ends of its six flats."""
+    half = (NUT_E / 2 - (NUT_AF / 2) * math.cos(math.pi / 6)) / math.sin(math.pi / 6)
+    return np.array([rz(k * math.pi / 3) @ np.array([NUT_AF / 2, s * half, 0.0]) for k in range(6) for s in (1.0, -1.0)])
+
+
+NUT_OUTLINE = nut_outline()
+
+
+def seat(o: np.ndarray, rw: np.ndarray, jaw_m: float, nut_yaw_now: float, nut_middle: np.ndarray) -> tuple[float, float, float, float]:
+    """How the nut sits in the jaws (m): its axis along the jaws in W (x), the gap from the fixed jaw's face to the nut's
+    outline and from the outline to the movable jaw's face, across the jaws (negative: overlapping), and how much of the
+    flats' height the jaws cover."""
+    x, _, z = rw.T @ (nut_middle - o)
+    across = [float(rw[:, 1] @ (nut_middle + rz(nut_yaw_now) @ c - o)) for c in NUT_OUTLINE]
+    bottom = z - NUT_H / 2
+    cover = min(JAW_T / 2, bottom + NUT_HEX_H) - max(-JAW_T / 2, bottom)
+    return float(x), min(across), jaw_m - max(across), float(cover)
+
+
+def seated(x: float, gap_fixed: float, gap_movable: float, cover: float) -> bool:
+    """The nut seated between the jaws: its axis between the throat and the jaw tips, each jaw face within SEAT_GAP of the
+    flat facing it (so the axis is between the faces), and the jaws on at least SEAT_COVER of the flats' height."""
+    inside = -NUT_E / 2 <= x <= -NUT_E / 2 + JAW_DEPTH
+    return bool(inside and max(abs(gap_fixed), abs(gap_movable)) <= SEAT_GAP + 1e-9 and cover >= SEAT_COVER - 1e-9)
 
 
 def jaw_middle(o: np.ndarray, rw: np.ndarray, jaw_m: float) -> np.ndarray:

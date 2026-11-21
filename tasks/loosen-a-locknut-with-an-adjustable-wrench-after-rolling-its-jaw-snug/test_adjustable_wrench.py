@@ -202,14 +202,21 @@ def test_a_hand_near_the_wrench_keeps_it_at_half(m):
 
 def test_moving_wrench_is_not_at_rest(m):
     b = done(m)
-    b.speed = 0.02
-    assert b.hold(1.5) == 0.5
+    for k in range(30):  # wrench and nut turning on together, 1 deg a step: on the nut, never still
+        b.nut(66.0 + k).turn(1.0)
+        assert b.hold() == 0.5 and m.on_nut()
 
 
 def test_snug_boundary_17_5_mm(m):
-    assert done(m, jaw=17.5).hold(1.2) == 1.0
+    """The scale's boundary, the nut centred in the jaws (0.25 mm a side; against one jaw the other side is the feeler's
+    0.5 mm, tested in the seat test)."""
+    b = done(m, jaw=17.5)
+    b.o = b.o - b.rw[:, 1] * 0.00025
+    assert b.hold(1.2) == 1.0
     m.start()
-    assert done(m, jaw=17.51).hold(1.2) == 0.25  # loosened with the jaw not snug
+    b = done(m, jaw=17.51)
+    b.o = b.o - b.rw[:, 1] * 0.00025
+    assert b.hold(1.2) == 0.25 and m.on_nut()  # loosened with the jaw not snug
 
 
 def test_loosen_boundary_60_deg(m):
@@ -219,7 +226,7 @@ def test_loosen_boundary_60_deg(m):
 
 
 def test_lower_levels(m):
-    assert Bench(m).jaw(17.2).nut(10.0).hold() == 0.25  # rolled snug, turned too little
+    assert Bench(m).jaw(17.2).nut(10.0).turn(10.0).hold() == 0.25  # rolled snug on the nut, turned too little
     m.start()
     assert Bench(m).jaw(18.4).nut(70.0).hold() == 0.25  # turned with a loose jaw
     m.start()
@@ -255,20 +262,56 @@ def test_nut_tightened_past_minus_10_deg_zeroes_the_trial(m):
     b.nut(65.0)
     assert b.hold(1.5) == 0.0
     m.start()
-    assert done(m).nut(-9.9).hold() == 0.25  # -9.9 deg: not past the limit; jaw snug, nut not loosened
-    m.start()
-    b = done(m).nut(-9.9)
-    b.hold()
-    b.nut(65.0)
+    b = Bench(m).jaw(17.2).nut(-9.9).turn(-9.9)
+    assert b.hold() == 0.25  # -9.9 deg: not past the limit; jaw snug on the nut, nut not loosened
+    b.nut(65.0).turn(74.9)
     assert b.hold(1.2) == 1.0
 
 
-def test_a_wrench_lifted_or_off_the_plate_is_not_set_down(m):
+def test_a_wrench_lifted_or_taken_off_the_nut_after_the_turn_scores_a_quarter(m):
+    """Snug is snug on the nut: off the nut at the end, a snug turn counts as a turn with a loose jaw."""
     b = done(m)
     b.o = b.o + np.array([0.0, 0.0, 0.03])  # held 30 mm up
-    assert b.hold(1.2) == 0.5
+    assert b.hold(1.2) == 0.25 and m.jaw_mm() <= 17.5 and not m.on_nut()
     b.o = b.o - np.array([0.0, 0.0, 0.03]) + np.array([0.0, -0.25, 0.0])  # on the bench beside the plate
-    assert b.hold(1.2) == 0.5
+    assert b.hold(1.2) == 0.25
+    m.start()
+    assert done(m, slide=0.040).hold(1.2) == 0.25  # slid off along its jaws, lying on the plate
+
+
+def test_a_jaw_closed_away_from_the_nut_scores_zero(m):
+    """Review: the open wrench lifted off the nut and its jaw closed in free space is not sized to the nut."""
+    b = Bench(m)
+    b.o = b.o + np.array([0.0, 0.0, 0.03])  # lifted 30 mm off the nut
+    assert b.jaw(17.2).hold() == 0.0 and not m.on_nut()
+    m.start()
+    b = Bench(m).slide(0.040)  # slid off along its jaws onto the plate, then closed
+    assert b.jaw(17.2).hold() == 0.0
+    assert b.jaw(10.0).hold() == 0.0
+    m.start()
+    assert Bench(m).jaw(17.2).hold() == 0.25 and m.on_nut()  # the same jaw closed on the nut
+
+
+def test_seated_needs_the_axis_in_the_opening_the_faces_on_the_flats_and_the_head_at_the_nut(m):
+    b = Bench(m).jaw(17.2)
+    assert b.hold() == 0.25
+    x, lo, hi, cover = m.seat()
+    assert abs(x) < 0.001 and -1e-4 < lo < 3e-4 and -1e-4 < hi < 3e-4 and 0.0055 < cover < 0.0063
+    up = np.array([0.0, 0.0, 0.0025])
+    b.o = b.o + up  # raised 2.5 mm: the jaws still on about 3.4 mm of the flats
+    assert b.hold() == 0.25
+    b.o = b.o + up  # 5 mm: on about 0.9 mm
+    assert b.hold() == 0.0
+    b.o = b.o - 2 * up - b.rw[:, 1] * 0.00045  # moved across: the fixed jaw's face 0.45 mm off its flat
+    assert b.hold() == 0.25
+    b.o = b.o - b.rw[:, 1] * 0.00015  # 0.6 mm: a 0.5 mm feeler gauge would pass
+    assert b.hold() == 0.0
+    b.o = b.o + b.rw[:, 1] * 0.0006 - b.rw[:, 0] * 0.024  # pulled back 24 mm: the nut's axis past the jaw tips
+    assert b.hold() == 0.0
+    b.o = b.o + b.rw[:, 0] * 0.024
+    assert b.hold() == 0.25
+    b.nut(12.0).hold()  # the nut turned 12 deg in a 17.2 mm jaw (corners into the faces): not on two flats
+    assert m.seat()[1] < -0.0005 and b.hold() == 0.0
 
 
 def test_a_tilted_wrench_is_not_lying_flat(m):
@@ -288,4 +331,10 @@ def test_start_geometry(m):
     across = math.atan2(rw[1, 1], rw[0, 1])
     off = math.degrees((across - P.nut_yaw(rw)) % (math.pi / 3))
     assert min(off, 60.0 - off) == pytest.approx(0.0, abs=1e-6)  # two flats parallel to the jaws
+    Bench(m).hold()
+    x, lo, hi, cover = m.seat()  # the fixed jaw on one flat, the nut against the throat, the open jaw 6 mm off the other
+    assert abs(x) < 0.001 and abs(lo) < 1e-4 and hi == pytest.approx(0.006, abs=1e-4) and cover > P.SEAT_COVER
+    assert math.radians(P.HANDLE_START_DEG) == pytest.approx(math.radians(210.0))  # back and to the right
+    h = rw @ np.array([*P.HANDLE_DIR_IN_W, 0.0])
+    assert h[0] < 0 and h[1] < 0 and math.degrees(math.atan2(h[1], h[0])) % 360 == pytest.approx(210.0, abs=0.01)
     assert P.NUT_E > P.NUT_AF and 1000 * P.NUT_E < 23.0  # the start jaw spins round the corners

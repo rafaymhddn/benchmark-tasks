@@ -7,7 +7,8 @@ Cases: ``torque_check`` (a known torque on the nut: 1.2, 1.4 and 1.6 N m, then -
 the nut 60 degrees and more and slides the wrench off along its jaws), ``start`` (stand still: start pictures),
 ``wipe`` (the knurl rolled, nothing turned), ``open_pull`` (the right hand turns with the jaw left at 23 mm),
 ``loose_pull``, ``snug_turn`` and ``tighten`` (clockwise) (the jaw set to 18.4 / 17.2 mm before the turn by moving where the knurl drives it,
-a trial's shortcut; the wrench is left on the nut).
+a trial's shortcut; the wrench is left on the nut), ``free_close`` (the open wrench slid off the nut along its jaws and let
+go, then its jaw closed to 17.2 mm away from the nut by the same shortcut).
 """
 
 from __future__ import annotations
@@ -30,12 +31,14 @@ PINCH_S = 0.160  # m along the handle from a seated nut's middle
 TURN_DEG = 85.0  # commanded; the arm lags about 23 mm at the 9.4 N the nut asks
 TIGHTEN_DEG = 30.0  # the tighten trial turns clockwise
 SLIDE = 0.055
+FREE_SLIDE = 0.040  # free_close: the nut's axis 40 mm along the jaws, past their tips (13.6 mm), the handle's end still on the plate
+FREE_STAND_S = 5.0  # free_close: after the hand has parked, the jaw closes over 3 s and the wrench lies still
 SLIDE_PUSH_N = 10.0  # N along the slide: the snug jaw (4 N) drags on the flats
 SLIDE_STEP, CLEAR_TO = 0.006, 0.045  # m per 0.25 s along the jaws; slide until the jaws' middle is 45 mm from the screw
 EASE_DEG = 12.0  # at most: the hand eases back by the wrench's lead on the nut and the nut's 2 deg spring-back, plus 1 deg
 PUSH_IN_N, PUSH_DOWN_N, PUSH_TURN_N = 2.0, 4.0, 12.0  # N while turning: towards the nut, down, and round (1.9 N m at 160 mm)
 OPEN_GRIP = 0.70  # 66 mm between the pads round the 21 mm handle: the hand stands 5 to 15 mm off after a carry
-PRESET_MM = {"loose_pull": 18.4, "snug_turn": 17.2, "tighten": 17.2}
+PRESET_MM = {"loose_pull": 18.4, "snug_turn": 17.2, "tighten": 17.2, "free_close": 17.2}
 TORQUE_STEPS = ((1.0, 1.2), (3.0, 1.4), (5.0, 1.6), (7.0, 0.0), (8.0, -1.6), (10.0, 0.0))  # (from s, N m counterclockwise on the nut)
 
 
@@ -125,11 +128,11 @@ class Plan:
             moves.append(kit.Move(0.7, self.nut + turn @ rel, turn @ rot, 0.0, f"turn {a * 180 / math.pi:.0f} deg", push=push))
         return moves
 
-    def right_slide(self, wrench_rot: np.ndarray, start: np.ndarray, rot: np.ndarray) -> list:
+    def right_slide(self, wrench_rot: np.ndarray, start: np.ndarray, rot: np.ndarray, slide: float = SLIDE) -> list:
         """Along the jaws' axis away from the tips (the nut leaves between the jaws), then let go and lift."""
         Move = self.kit.Move
         back = -self.flat_dir(wrench_rot[:, 0])
-        end = start + back * SLIDE
+        end = start + back * slide
         return [
             Move(3.0, end, rot, 0.0, "slide off along the jaws", push=back * SLIDE_PUSH_N),
             Move(0.5, end, rot, 0.0, "stop", push=np.zeros(3)),
@@ -157,6 +160,11 @@ class Plan:
                 turn = kit.about((0, 0, 1), math.radians(degrees))
                 end = self.nut + turn @ (grasp - self.nut)
                 right += [Move(2.0, end, turn @ rot, OPEN_GRIP, "let go", push=np.zeros(3)), Move(1.5, end + [0, 0, 0.07], turn @ rot, OPEN_GRIP, "lift")]
+        if self.case == "free_close":  # the open wrench taken off the nut, let go; the jaw is closed afterwards (run_case)
+            grasp, rot, _, _ = self.pinch()
+            right = [Move(0.5, None, None, None, "wait")] + self.right_reach() + self.right_slide(self.rw, grasp, rot, FREE_SLIDE)
+            right += [Move(2.0, np.array([0.18, -0.26, self.plate_top + 0.18]), kit.down(0.0), OPEN_GRIP, "park"),
+                      Move(FREE_STAND_S, None, None, None, "stand")]
         if self.case == "start":
             right = [Move(1.0, None, None, None, "stand")]
         if self.case == "torque_check":
@@ -190,6 +198,7 @@ def run_case(embodiment, case: str, out: Path, record: bool) -> dict:
         moves["right"] = moves["right"][:-n_slide]
     state = {"stage": "turn" if case in ("full", "snug_turn") else "done", "preset": PRESET_MM.get(case), "eased_at": None}
     t_turn_end = sum(mv.seconds for mv in moves["right"])
+    preset_from = t_turn_end - FREE_STAND_S + 0.5 if case == "free_close" else 0.2  # free_close: once the hand has parked
 
     def director(t: float, arms: dict, pictures) -> None:
         if not mk.MECH.poses:
@@ -197,8 +206,8 @@ def run_case(embodiment, case: str, out: Path, record: bool) -> dict:
         if case == "torque_check":  # a known torque on the nut alone (no wrench on it): where does it slip?
             now = [tq for t0, tq in TORQUE_STEPS if t >= t0]
             mk.push("nut", torque=(0.0, 0.0, now[-1] if now else 0.0))
-        if state["preset"] is not None and 0.2 <= t <= 3.25:  # trial shortcut: the jaw driven to a set opening over 3 s
-            share = min(1.0, (t - 0.2) / 3.0)
+        if state["preset"] is not None and preset_from <= t <= preset_from + 3.05:  # trial shortcut: the jaw driven to a set opening over 3 s
+            share = min(1.0, (t - preset_from) / 3.0)
             opening = m.P.JAW_START + share * (state["preset"] / 1000.0 - m.P.JAW_START)
             m.STATE["slip"] = float(m.mk.joint("knurl")) + (opening - m.P.JAW_START) * 2 * math.pi / m.P.KNURL_PITCH
         _, rot0, _, _ = plan.pinch()

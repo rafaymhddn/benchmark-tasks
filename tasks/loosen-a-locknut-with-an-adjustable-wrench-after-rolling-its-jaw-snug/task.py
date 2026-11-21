@@ -2,7 +2,7 @@
 Bahco 8071 adjustable wrench lying round it with its jaw open 23 mm, wider than the nut's corners (18.9 mm).
 
 Instruction: roll the wrench's knurled thumbwheel until the jaw is snug on the nut's flats, loosen the nut at least
-60 degrees counterclockwise with it, and let go of the wrench.
+60 degrees counterclockwise with it, and let go of the wrench, leaving it on the nut.
 
 Mechanics (figures and their sources in ``parts.py``):
 
@@ -16,8 +16,8 @@ Mechanics (figures and their sources in ``parts.py``):
   nut presses the jaw with more than 20 N the worm is locked: the knurl's turns do not move the jaw, and a stiff
   spring holds the jaw where the load found it.
 - A jaw wider than the nut's corners spins round it; any jaw narrower turns the nut, after some free swing. "Snug"
-  (17.5 mm or less on the jaw's scale) is scored as the practice that bears on the flats and keeps the corners from
-  rounding at real loosening torques; it is not needed to move a 1.5 N m nut.
+  (17.5 mm or less on the jaw's scale, with the nut seated between the jaws) is scored as the practice that bears on the
+  flats and keeps the corners from rounding at real loosening torques; it is not needed to move a 1.5 N m nut.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ SCORE_OVER = "end"
 SUCCESS_HOLD_S = 2.0
 INSTRUCTION = (
     "Roll the adjustable wrench's thumbwheel until its jaw is snug on the nut's flats, loosen the nut at least "
-    "60 degrees counterclockwise with it, and let go of the wrench."
+    "60 degrees counterclockwise with it, and let go of the wrench, leaving it on the nut."
 )
 RUN_LIMIT_STEPS = 1800  # 90 s at 20 Hz
 TOP = TABLE_TOP[SCENE]
@@ -47,6 +47,7 @@ TOP = TABLE_TOP[SCENE]
 START = P.declare_scene(TOP)
 OBJECTS = list(mk.MECH.bodies.values())
 PLATE_TOP = START["plate_top"]
+NUT_YAW = P.nut_yaw(START["wrench"][1])  # the nut's built yaw (two flats parallel to the jaws)
 STATE: dict = {}
 
 
@@ -77,8 +78,22 @@ def commanded_m(theta: float, slip: float) -> float:
     return float(np.clip(P.JAW_START - P.KNURL_PITCH * (theta - slip) / (2 * math.pi), 0.0, P.JAW_MAX))
 
 
+def seat() -> tuple[float, float, float, float]:
+    """The nut in the jaws (m): its axis along the jaws, the two faces' gaps to the flats, the flats' height covered."""
+    o, rw = wrench_pose()
+    return P.seat(o, rw, jaw_m(), NUT_YAW + float(mk.joint("nut_thread")), np.array([*P.NUT_XY, START["nut_z"]]))
+
+
+def on_nut() -> bool:
+    """The nut seated between the jaws: its axis inside the jaw opening, each jaw face within 0.5 mm of the flat facing it,
+    the head at the nut's height (the jaws on at least 3 mm of the flats)."""
+    return P.seated(*seat())
+
+
 def snug() -> bool:
-    return jaw_mm() <= P.SNUG_MM + 1e-9
+    """The jaw snug on the nut: at most 17.5 mm on its scale, with the nut seated between the jaws (a jaw closed away
+    from the nut is not snug)."""
+    return jaw_mm() <= P.SNUG_MM + 1e-9 and on_nut()
 
 
 def snug_turn() -> bool:
@@ -241,13 +256,13 @@ def step() -> None:
 
 
 def score(objects) -> float:
-    """0 for the whole trial if the nut was tightened past -10 deg. At the end:
-    1.0 nut loosened >= 60 deg, jaw snug (<= 17.5 mm), the wrench lying flat (<= 15 deg) on the plate, both hands
-    >= 30 mm from wrench and nut, wrench and nut still (1 mm, 0.5 deg) for 1.0 s;
-    0.5 nut loosened >= 60 deg with the jaw snug (also when the turn began), the rest not met;
-    0.25 the jaw snug with the nut under 60 deg, or the nut loosened >= 60 deg with the jaw not snug at the end or
-    when the turn began (the jaw's setting latched as the nut first passes 10 deg);
-    0.0 otherwise."""
+    """0 for the whole trial if the nut was tightened past -10 deg. At the end ("snug": ``snug()``, on the nut):
+    1.0 nut loosened >= 60 deg, the jaw snug and set <= 17.5 mm as the turn began, the wrench lying flat (<= 15 deg) on
+    the plate, both hands >= 30 mm from wrench and nut, wrench and nut still (1 mm, 0.5 deg) for 1.0 s;
+    0.5 nut loosened >= 60 deg with the jaw snug and set <= 17.5 mm as the turn began, the rest not met;
+    0.25 the jaw snug with the nut under 60 deg, or the nut loosened >= 60 deg with a loose jaw (set over 17.5 mm as the
+    turn began, or not snug at the end; the setting latched as the nut first passes 10 deg);
+    0.0 otherwise (a jaw closed away from the nut is not snug)."""
     del objects
     if STATE.get("tightened") is not None:
         return 0.0
@@ -274,6 +289,8 @@ def readings() -> dict:
         "head_on_nut_N": round(mk.contact_force("wrench", "nut"), 2),
         "clear": clear_of_nut(),
         "nut_in_jaws_mm": [round(1000 * float(v), 2) for v in nut_in_jaws()],
+        "seat_mm": [round(1000 * v, 3) for v in seat()],
+        "on_nut": on_nut(),
         "wrench_yaw_deg": round(wrench_yaw_deg(), 2),
         "head_up_mm": round(1000 * (float(wrench_pose()[0][2]) - float(START["wrench"][0][2])), 2),
         "flat": flat(),
