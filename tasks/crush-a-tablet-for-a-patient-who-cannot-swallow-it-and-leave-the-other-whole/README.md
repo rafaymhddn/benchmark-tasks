@@ -62,7 +62,7 @@ The rules (`task.py`) run every control step (50 ms).
   the right's wrist read 0.77 and 0.99 N m (1.13 at most), the still left arm 0.06 and 0.04 (0.34 at most), apart by the arm model's
   joint friction (an inference); the cap turned 0.97 deg at most in the pinch, the base 0.7 and 1.0 deg in the
   hold; drives at most 40 % of their limits. Margin: 0.45 N m a tablet, under half a pinch's 1 N m twist.
-- **Over the powder.** The thread ends 1.6 mm over the highest grain, as the press stops it on a tablet. Trial w12p31, turned to that end, level and tilted 10 deg: 48 of 48 grains stay.
+- **Over the powder.** The thread ends 1.6 mm over the highest grain. Trial w12p31, turned to that end, level and tilted 10 deg: 48 of 48 grains stay.
 - **Pressed powder** is a packed cake: held on the base (welded) until it leans past `SLIDE_ANGLE`, then loose grains
   (a loose powder hopped out at the regrips: w12s21 to w12s24), damped 10/s (a 0.2 mm powder's air drag:
   estimate), 20/s against rolling.
@@ -122,9 +122,6 @@ the harness gives the trial seed 1415158438, this same start.
         --instruction "Crush Mrs Lee's evening tablets into her applesauce with the pill crusher." \
         --scorer task_score --max-steps 7000 --seed 0 --policy <policy>
     python demo.py <out dir>               # the scripted full run, about 4.3 minutes simulated
-    python demo.py <out dir> tips --norec  # a short case: tips, seat, screw, pour
-    python demo.py --quick                 # the plan through the IK and the clearances, no simulator
-    python trials.py <out dir> powder,powder_tilted,press,rest
     python -m pytest test_pill_crusher.py
 
 ## Sources
@@ -134,3 +131,7 @@ the harness gives the trial seed 1415158438, this same start.
   medicines in Dutch nursing homes, 3.1 % (21 of 681 administrations).
 - ISMP's do-not-crush list names enteric-coated aspirin (not opened: ismp.org/recommendations/do-not-crush leads
   to ECRI).
+
+## Third-party assets
+
+PT Sans Narrow Bold (copyright 2009 ParaType Ltd, ParaType Free Font License, company.paratype.com/pt-sans-pt-serif) is drawn into the card artwork (`card_print.py`, `card_print.json`); the font file is not included. No other third-party assets.
