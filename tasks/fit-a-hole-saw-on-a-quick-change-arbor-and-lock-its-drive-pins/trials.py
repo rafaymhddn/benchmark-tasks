@@ -174,7 +174,86 @@ def trial_locked_twist_hold(embodiment, m) -> dict:
     return out
 
 
+def _retract_and_hover(embodiment, m, pos, rot) -> None:
+    """Reset, retract the collar, and hold the hole saw still at ``pos`` / ``rot`` with a push cancelling its weight
+    (the trial's stand-in for a hand holding it there)."""
+    from inspect_robots import Scene
+
+    P = m.P
+    embodiment.reset(Scene(id="trial", instruction=m.INSTRUCTION), seed=0)
+    m.mk.set_spring("collar_z", rest=-P.COLLAR_BEYOND)
+    m.mk.set_joint("collar_z", 0.0)
+    m.STATE["collar_up"] = False
+    m.STATE["ever_retracted"] = True
+    m.mk.write_pose("hole_saw", tuple(float(v) for v in pos), m.mk.matrix_to_quat(rot))
+    m.mk.push("hole_saw", force=(0.0, 0.0, P.SAW_MASS * P.GRAVITY))
+
+
+def _change(a, b) -> tuple[float, float]:
+    """(mm, deg) between two poses (position, rotation matrix)."""
+    dp = 1000.0 * float(np.linalg.norm(np.asarray(b[0]) - np.asarray(a[0])))
+    c = (float(np.trace(np.asarray(a[1]).T @ np.asarray(b[1]))) - 1.0) / 2.0
+    return round(dp, 4), round(math.degrees(math.acos(max(-1.0, min(1.0, c)))), 4)
+
+
+def trial_catch_in_place(embodiment, m) -> dict:
+    """The thread catches where the saw stands: held still 0.3 mm off-axis, level, 0.07 mm under its thread start
+    (yaw -30 deg), it catches; its pose changes < 0.1 mm / 0.1 deg across the catch step and the step after; let go,
+    the thread holds its weight."""
+    P = m.P
+    yaw = math.radians(-30.0)
+    pos = (P.X_ARBOR + 0.0003, P.Y_ARBOR, m.TOP + P.Z_SHOULDER + P.thread_start_gap(yaw) - 0.00007)
+    rot = m.mk.quat_to_matrix(m.mk.yaw_quat(yaw))
+    _retract_and_hover(embodiment, m, pos, rot)
+    act = _hold_action()
+    poses, k_catch = [(np.array(pos), rot)], None
+    for i in range(20):
+        embodiment.step(act)
+        poses.append(tuple(np.array(v, dtype=float) for v in m.saw_pose()))
+        if k_catch is None and m.thread_engaged():
+            k_catch = i + 1  # poses[k_catch] is the pose after the step whose on_step made the weld
+        if k_catch is not None and len(poses) > k_catch + 1:
+            break
+    out = {"catch": m.STATE.get("catch"), "caught": k_catch is not None}
+    if k_catch is not None:
+        out["into_catch_step_mm_deg"] = _change(poses[k_catch - 1], poses[k_catch])
+        out["after_catch_step_mm_deg"] = _change(poses[k_catch], poses[k_catch + 1])
+    gap_caught = m.saw_shoulder_gap()
+    m.mk.push("hole_saw", force=(0.0, 0.0, 0.0))
+    _, rest = _step_for(embodiment, m, 1.0)
+    out["gap_change_unheld_1s_mm"] = round(1000.0 * (m.saw_shoulder_gap() - gap_caught), 4)
+    out["end_score"], out["engaged_at_end"] = rest["end_score"], m.thread_engaged()
+    jumps = [out.get("into_catch_step_mm_deg", (9.0, 9.0)), out.get("after_catch_step_mm_deg", (9.0, 9.0))]
+    out["pass"] = bool(out["caught"] and all(mm < 0.1 and deg < 0.1 for mm, deg in jumps)
+                       and abs(out["gap_change_unheld_1s_mm"]) < 0.1 and out["engaged_at_end"] and out["end_score"] == 0.25)
+    return out
+
+
+def trial_cross_thread_no_catch(embodiment, m) -> dict:
+    """A saw set on its thread start tilted 3 deg, or 0.6 mm off-axis, does not catch (it cross-threads): held there
+    1.0 s it stays free; let go, it slides down the smooth boss and scores as the tiers say (0.25, collar retracted)."""
+    P = m.P
+    yaw = math.radians(-30.0)
+    out, ok = {}, True
+    for name, (dx, dy, tilt_deg) in {"tilted_3deg": (0.0, 0.0, 3.0), "off_axis_0p6mm": (0.000424, 0.000424, 0.0)}.items():
+        rot = m.mk.quat_to_matrix(m.mk.yaw_quat(yaw)) @ m.mk.axis_angle((1.0, 0.0, 0.0), math.radians(tilt_deg))
+        pos = (P.X_ARBOR + dx, P.Y_ARBOR + dy, m.TOP + P.Z_SHOULDER + P.thread_start_gap(yaw) - 0.00007)
+        _retract_and_hover(embodiment, m, pos, rot)
+        _, held = _step_for(embodiment, m, 1.0)
+        m.mk.push("hole_saw", force=(0.0, 0.0, 0.0))
+        _, after = _step_for(embodiment, m, 1.5)
+        ever = any(r["thread_engaged"] for r in held["samples"] + after["samples"])
+        out[name] = {"ever_engaged": ever, "held_xy_off_mm": round(1000.0 * math.hypot(dx, dy), 3), "tilt_deg": tilt_deg,
+                     "end_gap_mm": after["report"]["shoulder_gap_mm"], "end_phase_deg": after["report"]["phase_err_deg"],
+                     "end_score": after["end_score"]}
+        ok &= (not ever) and after["end_score"] == 0.25
+    out["pass"] = bool(ok)
+    return out
+
+
 TRIALS = {
+    "catch_in_place": trial_catch_in_place,
+    "cross_thread_no_catch": trial_cross_thread_no_catch,
     "dropped_zero": trial_dropped_zero,
     "collar_up_blocked": trial_collar_up_blocked,
     "bottomed_out_stall": trial_bottomed_out_stall,

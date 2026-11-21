@@ -40,6 +40,15 @@ def _saw_on_arbor(gap_m: float, yaw_deg: float, collar_z: float, *, clear_hands:
     )
 
 
+def _engage(yaw_deg: float = -30.0, under_m: float = 0.00005) -> float:
+    """Set the hole saw on the thread start (coaxial, level, collar retracted) and step once: the thread catches."""
+    gap = P.thread_start_gap(math.radians(yaw_deg)) - under_m
+    _saw_on_arbor(gap_m=gap, yaw_deg=yaw_deg, collar_z=0.0)
+    T.step()
+    assert T.thread_engaged()
+    return gap
+
+
 def test_idle_scores_zero() -> None:
     _reset_offline(collar_z=P.PIN_STROKE)
     T.step()
@@ -110,6 +119,7 @@ def test_early_half_turn_at_180_deg_scores_quarter() -> None:
 def test_backed_off_aligned_without_collar_scores_half() -> None:
     """Backed off 55 deg CCW from +415 deg to +360 deg (gap 0.22 mm <= 0.60 mm, phase <= 8 deg), collar down -> 0.5."""
     _reset_offline(collar_z=0.0)
+    _engage()
     gap_360 = P.gap_for_yaw_deg(P.ALIGN_DEG)
     assert 0.0001 <= gap_360 <= P.SEATED_GAP_MAX
     _saw_on_arbor(gap_m=gap_360, yaw_deg=5.0, collar_z=0.0020)
@@ -123,6 +133,7 @@ def test_backed_off_aligned_without_collar_scores_half() -> None:
 
 def test_full_score_requires_collar_locked_hands_clear_still_and_hold() -> None:
     _reset_offline(collar_z=0.0)
+    _engage()
     gap_360 = P.gap_for_yaw_deg(P.ALIGN_DEG)
     # Hands too close -> stays 0.5
     _saw_on_arbor(gap_m=gap_360, yaw_deg=0.0, collar_z=0.0078, clear_hands=False)
@@ -148,9 +159,8 @@ def test_full_score_requires_collar_locked_hands_clear_still_and_hold() -> None:
 
 def test_thread_catches_when_retracted_and_releases_when_unthreaded() -> None:
     _reset_offline(collar_z=0.0)
-    _saw_on_arbor(gap_m=P.Z_ENTRY - P.Z_SHOULDER, yaw_deg=0.0, collar_z=0.0)
-    T.step()
-    assert T.thread_engaged()
+    _engage(yaw_deg=0.0, under_m=0.0)  # at yaw 0 the thread start is Z_ENTRY (1.63 mm over the shoulder)
+    assert math.isclose(P.thread_start_gap(0.0), P.Z_ENTRY - P.Z_SHOULDER, abs_tol=1e-12)
 
     # Turning CCW back past UNTHREAD_DEG (-3.0 deg) cuts w_thread
     per_unthread = math.radians(-4.5) / 3.0
@@ -160,6 +170,52 @@ def test_thread_catches_when_retracted_and_releases_when_unthreaded() -> None:
     )
     T.step()
     assert not T.thread_engaged()
+
+
+def test_thread_start_needs_coaxial_square_on_the_first_thread() -> None:
+    """The catch fires only where the robot has set the saw on the thread start; nothing moves the saw onto it."""
+    yaw = math.radians(-30.0)
+    start = P.thread_start_gap(yaw)
+    assert math.isclose(start, P.gap_for_yaw_deg(30.0), rel_tol=1e-12)
+    for dx, tilt_deg, under, collar, ok in (
+        (0.00045, 0.0, 0.00005, 0.0, True),  # 0.45 mm off-axis, level, on the first thread: catches
+        (0.0, 1.4, 0.00014, 0.0, True),  # square within 1.5 deg, 0.14 mm under the start: catches
+        (0.00055, 0.0, 0.00005, 0.0, False),  # 0.55 mm off-axis: cross-threads
+        (0.0, 1.6, 0.00005, 0.0, False),  # tilted 1.6 deg: cross-threads
+        (0.0, 0.0, -0.00005, 0.0, False),  # 0.05 mm over the start: not on the thread yet
+        (0.0, 0.0, 0.00016, 0.0, False),  # 0.16 mm under the start (past the band): it slid past the start
+        (0.0, 0.0, 0.00005, 0.0025, False),  # collar not retracted
+    ):
+        _reset_offline(collar_z=collar)
+        rot = mk.quat_to_matrix(mk.yaw_quat(yaw)) @ mk.axis_angle((1.0, 0.0, 0.0), math.radians(tilt_deg))
+        mk.set_state(poses={"hole_saw": (np.array([P.X_ARBOR + dx, P.Y_ARBOR, T.TOP + P.Z_SHOULDER + start - under]), rot)},
+                     joints={"collar_z": collar})
+        T.step()
+        assert T.thread_engaged() is ok, (dx, tilt_deg, under, collar)
+
+
+def test_catch_engages_where_the_saw_stands() -> None:
+    """The thread travel taken at the catch is the one for the saw's own height: the carrier goes to the saw."""
+    _reset_offline(collar_z=0.0)
+    gap = _engage(yaw_deg=-30.0, under_m=0.00009)
+    catch = T.STATE["catch"]
+    assert math.isclose(catch["cw_deg"], round(P.cw_for_gap_deg(gap), 2), abs_tol=0.011)
+    assert math.isclose(P.gap_for_yaw_deg(P.cw_for_gap_deg(gap)), gap, abs_tol=1e-12)
+    assert 30.0 <= catch["cw_deg"] <= 30.0 + 360.0 * P.CATCH_GAP_BAND / P.THREAD_PITCH  # holes still line up short of the stop
+    for name in ("task.py", "demo.py", "scene.py"):
+        assert "write_pose" not in (HERE / name).read_text(), f"{name} writes a pose"
+
+
+def test_uncaught_saw_on_the_shoulder_never_scores_seated() -> None:
+    """A saw that never caught the thread (here dropped on the shoulder, aligned, collar pushed up, hands clear) is
+    cross-threaded: 0.25 for the retracted collar, never 0.5 or 1.0."""
+    _reset_offline(collar_z=0.0)
+    T.step()
+    _saw_on_arbor(gap_m=0.0002, yaw_deg=0.0, collar_z=0.0078)
+    for _ in range(P.HOLD_STEPS + 3):
+        T.step()
+    assert not T.thread_engaged()
+    assert T.score(None) == 0.25
 
 
 def test_non_overlapping_backplate_boxes_and_figures() -> None:

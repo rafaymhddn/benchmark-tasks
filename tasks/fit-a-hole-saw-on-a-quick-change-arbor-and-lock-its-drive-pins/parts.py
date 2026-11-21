@@ -117,7 +117,7 @@ COLLAR_MASS = figure(
 )
 COLLAR_DETENT_N = figure(
     "collar ball-detent peak axial force", 10.0, "N", ESTIMATE,
-    "estimate (assumed): ~10 N spring-ball detent holding collar up or down; maker publishes no force figure",
+    "estimate: ~10 N spring-ball detent holding the 85 g collar up or down; maker publishes no force figure",
 )
 
 # Arbor vertical stack in bench coordinates (bottom of hex shank at z = 25 mm inside 38 mm vise jaws -> top 126.6 mm):
@@ -186,7 +186,7 @@ ALIGN_DEG = figure(
 BACKOFF_DEG = STOP_DEG - ALIGN_DEG  # 55.0 deg
 THREAD_DRAG_NM = figure(
     "5/8-18 thread rotational drag", 0.06, "N m", ESTIMATE,
-    "estimate (assumed): dry steel 5/8-18 thread running torque; maker publishes no torque figure",
+    "estimate: dry steel 5/8-18 thread running torque; maker publishes no torque figure",
 )
 THREAD_SPRING_K = 12.0  # N m/rad on each serial carrier hinge (0.06 N m / 12 = 0.29 deg yield << 45 deg kit rule)
 THREAD_DAMP = 0.04  # N m s/rad
@@ -198,12 +198,23 @@ Z_ENTRY = Z_SHOULDER + THREAD_PITCH * (STOP_DEG / 360.0)  # 0.095627 m (1.63 mm 
 SLIDE_PLAY = 0.00006  # m axial stop window on cup_z (gives 0.16 mm gap at +360 deg)
 HIDDEN_MASS = 0.050  # kg per hidden thread-carrier link for crisp PhysX constraint conditioning
 
-# Capture tolerances when lowering hole_saw coaxially onto retracted arbor thread entry
-CATCH_XY_MAX = 0.0035  # m coaxial radial tolerance (pilot nose guides bore in)
-CATCH_TILT_DEG = 6.5  # deg max tilt from vertical
-CATCH_Z_LOW = -0.0004  # m below Z_SHOULDER
-CATCH_Z_HIGH = 0.0028  # m above Z_SHOULDER (covers Z_ENTRY = +1.63 mm)
+# Thread start: the hole saw catches the thread only where the robot has set its first thread on the arbor's first
+# thread, coaxial and square, its backplate just under the thread-start height for its yaw (thread_start_gap). Outside
+# these a real 5/8"-18 start skips a groove and cross-threads; nothing moves the saw onto the thread.
+CATCH_XY_MAX = figure(
+    "thread-start coaxial tolerance", 0.0005, "m", ESTIMATE,
+    "estimate: two thirds of the 0.76 mm flank engagement of a 5/8-18 UNF pair (ASME B1.1 basic internal thread height 0.541 x 1.411 mm)",
+)
+CATCH_TILT_DEG = figure(
+    "thread-start squareness tolerance", 1.5, "deg", ESTIMATE,
+    "estimate: 60 % of the 2.5 deg at which one side of the 15.9 mm thread rises half a pitch over the other (atan(0.706 / 15.875))",
+)
+CATCH_GAP_BAND = figure(
+    "thread-start height band", 0.00015, "m", ESTIMATE,
+    "estimate: backplate within 0.15 mm under the thread-start height for its yaw (38 deg of the 1.411 mm lead: the holes still line up before the stop)",
+)
 CATCH_COLLAR_MAX = 0.0020  # m: collar must be retracted (<= 2.0 mm) for cup to reach thread entry
+UNTHREAD_REARM_GAP = 0.0068  # m: after an unthread the catch re-arms once the backplate is lifted 6.8 mm over the shoulder
 
 # --- 5. Scoring constants (identical in task.py, task.json, and README.md) ---
 DROP_BELOW_BENCH = -0.010  # m: whole-trial zero if hole_saw drops below bench level
@@ -230,6 +241,23 @@ HOLD_STEPS = 20  # 1.0 s at 20 Hz
 def gap_for_yaw_deg(yaw_deg: float) -> float:
     """Axial gap (m) between hole_saw backplate underside and Z_SHOULDER at CW thread travel ``yaw_deg``."""
     return THREAD_PITCH * max(0.0, STOP_DEG - float(yaw_deg)) / 360.0
+
+
+def thread_start_cw_deg(world_yaw_rad: float) -> float:
+    """CW thread travel (deg, 0..180) at which a hole saw standing at ``world_yaw_rad`` meets the stand-in's thread start
+    (one every 180 deg, phased so that both holes line up over the +/-y pins at ALIGN_DEG = +360 deg)."""
+    cw = (-math.degrees(float(world_yaw_rad))) % 180.0
+    return 0.0 if cw >= 180.0 else cw  # float rounding: -1e-15 % 180 gives 180.0
+
+
+def thread_start_gap(world_yaw_rad: float) -> float:
+    """Axial gap (m) over the shoulder at which a hole saw at ``world_yaw_rad`` rests on the thread start."""
+    return gap_for_yaw_deg(thread_start_cw_deg(world_yaw_rad))
+
+
+def cw_for_gap_deg(gap_m: float) -> float:
+    """CW thread travel (deg) at which the backplate stands ``gap_m`` over the shoulder (inverse of gap_for_yaw_deg)."""
+    return STOP_DEG - 360.0 * float(gap_m) / THREAD_PITCH
 
 
 def phase_err_deg(world_yaw_rad: float) -> float:

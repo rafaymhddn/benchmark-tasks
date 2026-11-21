@@ -126,6 +126,18 @@ def thread_cw_deg() -> float:
     return float(math.degrees(sum(mk.joint(j) for j in scene.TURN_JOINTS)))
 
 
+def thread_start_ok() -> bool:
+    """The robot has set the hole saw on the thread start: collar retracted, coaxial within CATCH_XY_MAX, square within
+    CATCH_TILT_DEG, and its backplate at most CATCH_GAP_BAND under the thread-start height for its yaw."""
+    under = P.thread_start_gap(saw_yaw_rad()) - saw_shoulder_gap()
+    return bool(
+        collar_travel() <= P.CATCH_COLLAR_MAX
+        and saw_xy_off() <= P.CATCH_XY_MAX
+        and saw_tilt_deg() <= P.CATCH_TILT_DEG
+        and 0.0 <= under <= P.CATCH_GAP_BAND
+    )
+
+
 def zero_now() -> str | None:
     if saw_pose()[0][2] - TOP < P.DROP_BELOW_BENCH:
         return "the hole saw dropped below the bench"
@@ -216,20 +228,15 @@ def _step_thread() -> None:
     if not thread_engaged():
         gap = saw_shoulder_gap()
         if STATE.get("unthread_wait", False):
-            if gap > P.CATCH_Z_HIGH + 0.004:
+            if gap > P.UNTHREAD_REARM_GAP:
                 STATE["unthread_wait"] = False
             return
-        if (
-            collar_travel() <= P.CATCH_COLLAR_MAX
-            and saw_xy_off() <= P.CATCH_XY_MAX
-            and saw_tilt_deg() <= P.CATCH_TILT_DEG
-            and P.CATCH_Z_LOW <= gap <= P.CATCH_Z_HIGH
-        ):
-            yaw = saw_yaw_rad()
-            # Map initial cup yaw into [-8, +172) deg CW (2-hole 180-deg symmetry) with zero yaw jump!
-            cw_deg = ((-math.degrees(yaw) + 8.0) % 180.0) - 8.0
-            z_rel = P.gap_for_yaw_deg(cw_deg) - (P.Z_ENTRY - P.Z_SHOULDER)
+        if thread_start_ok():
+            # Engage the thread stand-in where the saw stands: the hidden carrier (never the saw) goes to the thread
+            # travel of the saw's present height, and the weld joins the two as they stand. Nothing moves the saw.
+            cw_deg = P.cw_for_gap_deg(gap)
             if _in_sim():
+                z_rel = gap - (P.Z_ENTRY - P.Z_SHOULDER)
                 mk.set_limits("cup_z", lower=z_rel - P.SLIDE_PLAY, upper=z_rel + P.SLIDE_PLAY)
                 mk.set_joint("cup_z", z_rel)
                 per = math.radians(cw_deg) / 3.0
@@ -237,10 +244,10 @@ def _step_thread() -> None:
                     mk.set_joint(j, per)
                     mk.set_spring(j, rest=per, most=P.THREAD_DRAG_NM)
                     STATE["turn_rest"][j] = per
-                z_snap = TOP + P.Z_SHOULDER + P.gap_for_yaw_deg(cw_deg)
-                mk.write_pose("hole_saw", (P.X_ARBOR, P.Y_ARBOR, z_snap), mk.yaw_quat(yaw))
             mk.make("w_thread")
-            _note(f"thread caught at cw={cw_deg:.1f} deg, gap={1000 * P.gap_for_yaw_deg(cw_deg):.2f} mm")
+            STATE["catch"] = {"cw_deg": round(cw_deg, 2), "gap_mm": round(1000.0 * gap, 3),
+                              "xy_off_mm": round(1000.0 * saw_xy_off(), 3), "tilt_deg": round(saw_tilt_deg(), 3)}
+            _note(f"thread caught where the saw stands: cw={cw_deg:.1f} deg, gap={1000 * gap:.3f} mm")
         return
 
     cw_deg = thread_cw_deg()
@@ -277,7 +284,8 @@ def _step_thread() -> None:
 # --- scoring -----------------------------------------------------------------------------------------------
 def aligned_and_seated() -> bool:
     return (
-        saw_xy_off() <= 0.004
+        thread_engaged()
+        and saw_xy_off() <= 0.004
         and saw_tilt_deg() <= 6.0
         and -0.0003 <= saw_shoulder_gap() <= P.SEATED_GAP_MAX
         and saw_phase_err_deg() <= P.ALIGN_WINDOW_DEG
@@ -314,15 +322,17 @@ def level() -> float:
         return 1.0
     if aligned_and_seated():
         return 0.5
-    coax_threaded = saw_xy_off() <= 0.004 and saw_tilt_deg() <= 6.0 and -0.0005 <= saw_shoulder_gap() <= P.THREADED_GAP_MAX
+    coax_threaded = thread_engaged() and saw_xy_off() <= 0.004 and saw_tilt_deg() <= 6.0 and -0.0005 <= saw_shoulder_gap() <= P.THREADED_GAP_MAX
     if STATE.get("ever_retracted", False) or collar_travel() <= P.RETRACTED_AT or coax_threaded:
         return 0.25
     return 0.0
 
 
 def score(objects) -> float:
-    """0 for good if the hole saw ever drops below the bench. At the end: 1.0 when the hole saw is coaxial on the
-    arbor (within 4 mm, tilt <= 6 deg) with a 0.05..0.60 mm shoulder gap, its two backplate pin holes aligned within
+    """0 for good if the hole saw ever drops below the bench. Threaded means caught at a real thread start (set down
+    coaxial within 0.5 mm and square within 1.5 deg on the first thread); a saw that never caught is cross-threaded.
+    At the end: 1.0 when the threaded hole saw is coaxial on the arbor (within 4 mm, tilt <= 6 deg) with a shoulder gap
+    of at most 0.60 mm, its two backplate pin holes aligned within
     8 degrees of the drive pins, the collar pushed within 1.5 mm of its upper stop (>= 6.5 mm travel, locking both
     pins through the 5.0 mm backplate), both hands >= 30 mm clear, and all bodies still for 1.0 s. 0.5 when seated
     (<= 0.60 mm gap) and aligned within 8 degrees without the collar locked home. 0.25 when the collar was retracted
@@ -341,6 +351,7 @@ def report() -> dict:
         "hold_steps": STATE.get("hold", 0),
         "peak_CW_deg": round(STATE.get("peak_CW_deg", 0.0), 2),
         "peak_pin_block_N": round(STATE.get("peak_pin_block_N", 0.0), 2),
+        "catch": STATE.get("catch"),
         "events": STATE.get("events", []),
     }
     if mk.MECH.poses:
