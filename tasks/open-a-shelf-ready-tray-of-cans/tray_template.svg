@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="550mm" height="495mm" viewBox="0 0 550 495">
+  <title>Shelf-Ready Corrugated Tray Dieline (230 x 164 x 130 mm, 3.0 mm B-Flute)</title>
+  <desc>1:1 millimetre template for cutting, creasing, and perforating a 3x2 (6 x 400 g can) shelf-ready tray from a single 3.0 mm B-flute corrugated sheet. Solid black = through-cut; dashed blue = crease fold (90 deg wall/tab folds, 180 deg top header fold); red dash-gap = perforation tear line (6 mm cut / 2 mm tie along bottom z = 28 mm and both vertical side seams z = 28..130 mm).</desc>
+  <style>
+    .cut { fill: none; stroke: #111111; stroke-width: 0.6; }
+    .fold { fill: none; stroke: #1b5e9e; stroke-width: 0.5; stroke-dasharray: 4,2; }
+    .perf { fill: none; stroke: #b71c1c; stroke-width: 0.7; stroke-dasharray: 6,2; }
+    .glue { fill: #f3efe6; stroke: #111111; stroke-width: 0.4; }
+    .board { fill: #eadbc4; stroke: none; }
+    .label { font-family: sans-serif; font-size: 6.5px; fill: #222222; }
+    .dim { font-family: sans-serif; font-size: 5.5px; fill: #333333; }
+  </style>
+
+  <!-- Sheet background (550 x 495 mm) -->
+  <rect id="sheet_bg" x="5" y="5" width="540" height="485" fill="#ffffff" stroke="#cccccc" stroke-width="0.3"/>
+
+  <!-- Rear wall: x=160..390 (230 mm wide), y=38..168 (130 mm tall) -->
+  <rect id="rear_wall" class="board" x="160" y="38" width="230" height="130"/>
+  <!-- Tray floor: x=160..390 (230 mm wide), y=168..332 (164 mm deep) -->
+  <rect id="tray_floor" class="board" x="160" y="168" width="230" height="164"/>
+  <!-- Left & right side walls: 130 mm tall x 164 mm deep -->
+  <rect id="left_wall" class="board" x="30" y="168" width="130" height="164"/>
+  <rect id="right_wall" class="board" x="390" y="168" width="130" height="164"/>
+
+  <!-- Rear corner glue flaps (35 x 130 mm) and front lower-lip glue flaps (35 x 28 mm) -->
+  <rect id="glue_rear_left" class="glue" x="125" y="38" width="35" height="130"/>
+  <rect id="glue_rear_right" class="glue" x="390" y="38" width="35" height="130"/>
+  <rect id="glue_lip_left" class="glue" x="125" y="332" width="35" height="28"/>
+  <rect id="glue_lip_right" class="glue" x="390" y="332" width="35" height="28"/>
+
+  <!-- Fixed front lower retainer skirt: x=160..390 (230 mm wide), y=332..360 (28 mm tall) -->
+  <rect id="front_lip" class="board" x="160" y="332" width="230" height="28"/>
+
+  <!-- Vertical side-seam glue + perforation tabs (z=28..130 mm, 102 mm tall) attaching front panel to upper side walls -->
+  <rect id="side_tab_left" class="glue" x="131" y="360" width="35" height="102"/>
+  <rect id="side_tab_right" class="glue" x="384" y="360" width="35" height="102"/>
+
+  <!-- Perforated tear-off front panel: x=166..384 (218 mm wide), y=360..462 (102 mm tall) -->
+  <rect id="front_panel" class="board" x="166" y="360" width="218" height="102"/>
+  <!-- Double-ply top header fold: x=166..384 (218 mm wide), y=462..480 (18 mm tall, folds 180 deg over top edge) -->
+  <rect id="header_fold" class="board" x="166" y="462" width="218" height="18"/>
+
+  <!-- Outer through-cut perimeter -->
+  <path id="outer_cut" class="cut" d="M 125,38 L 425,38 L 425,168 L 520,168 L 520,332 L 425,332 L 425,360 L 419,360 L 419,462 L 384,462 L 384,480 L 166,480 L 166,462 L 131,462 L 131,360 L 125,360 L 125,332 L 30,332 L 30,168 L 125,168 Z"/>
+  <!-- Slot cuts separating lower-lip glue flaps from upper side-seam perforation tabs at y=360 -->
+  <line class="cut" x1="125" y1="360" x2="160" y2="360"/>
+  <line class="cut" x1="390" y1="360" x2="425" y2="360"/>
+
+  <!-- 90-deg crease fold lines (walls, glue flaps, side-seam wings) and 180-deg top header fold -->
+  <line id="fold_left" class="fold" x1="160" y1="38" x2="160" y2="462"/>
+  <line id="fold_right" class="fold" x1="390" y1="38" x2="390" y2="462"/>
+  <line id="fold_rear" class="fold" x1="160" y1="168" x2="390" y2="168"/>
+  <line id="fold_front" class="fold" x1="160" y1="332" x2="390" y2="332"/>
+  <line id="fold_header" class="fold" x1="166" y1="462" x2="384" y2="462"/>
+
+  <!-- Perforation tear lines (6 mm cut / 2 mm tie, the perforation of the cited tear data): bottom horizontal (218 mm) + left & right vertical seams (102 mm) -->
+  <line id="perf_bottom" class="perf" x1="166" y1="360" x2="384" y2="360"/>
+  <line id="perf_left" class="perf" x1="166" y1="360" x2="166" y2="462"/>
+  <line id="perf_right" class="perf" x1="384" y1="360" x2="384" y2="462"/>
+
+  <!-- Neutral technical annotations -->
+  <text class="label" x="275" y="22" text-anchor="middle">Shelf-Ready Tray Template — 230 x 164 x 130 mm (3.0 mm B-Flute Board, 1:1 mm)</text>
+  <text class="label" x="275" y="106" text-anchor="middle">REAR WALL (230 x 130 mm)</text>
+  <text class="label" x="275" y="252" text-anchor="middle">TRAY FLOOR (230 x 164 mm — 3 x 2 cans, 73 mm dia)</text>
+  <text class="label" x="95" y="252" text-anchor="middle">LEFT WALL (164 x 130 mm)</text>
+  <text class="label" x="455" y="252" text-anchor="middle">RIGHT WALL (164 x 130 mm)</text>
+  <text class="dim" x="275" y="348" text-anchor="middle">FIXED FRONT RETAINER LIP (230 x 28 mm)</text>
+  <text class="dim" x="275" y="357" text-anchor="middle">BOTTOM PERFORATION (z = 28 mm: 27 ties across 218 mm, 6 mm cut / 2 mm tie)</text>
+  <text class="label" x="275" y="414" text-anchor="middle">PERFORATED TEAR-OFF FRONT PANEL (218 x 102 mm)</text>
+  <text class="dim" x="148" y="414" text-anchor="middle" transform="rotate(-90 148 414)">SIDE GLUE + PERF TAB (102 mm)</text>
+  <text class="dim" x="402" y="414" text-anchor="middle" transform="rotate(90 402 414)">SIDE GLUE + PERF TAB (102 mm)</text>
+  <text class="dim" x="275" y="473" text-anchor="middle">FOLD 180 DEG FOR 2-PLY TOP GRIP HEADER (218 x 18 mm)</text>
+</svg>
