@@ -30,15 +30,15 @@ def m():
         sys.modules["mechkit"] = before
 
 
-def place(m, dy=0.0, dz=0.0, tilt_deg=0.0, levers=(DOWN, DOWN), press=(0.0, 0.0), grippers=AWAY, time=None, moving=False, speeds=None):
-    """The bar moved by (dy, dz) from where it was built and turned ``tilt_deg`` about x (off level), its cups and its
-    levers (deg from up: left, right) riding on it; each cup's press on the tile (N); everything at rest unless
+def place(m, dy=0.0, dz=0.0, tilt_deg=0.0, levers=(DOWN, DOWN), press=(0.0, 0.0), grippers=AWAY, time=None, moving=False, speeds=None, dx=0.0):
+    """The bar moved by (dx, dy, dz) from where it was built and turned ``tilt_deg`` about x (off level), its cups and
+    its levers (deg from up: left, right) riding on it; each cup's press on the tile (N); everything at rest unless
     ``moving``; ``speeds``: body -> (linear m/s, angular rad/s), over the rest."""
     mk = m.mk
     p0, r0 = mk.built_pose("bar")
     c, s = math.cos(math.radians(tilt_deg)), math.sin(math.radians(tilt_deg))
     turn = np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]])
-    bar = (p0 + np.array([0.0, dy, dz]), turn @ r0)
+    bar = (p0 + np.array([dx, dy, dz]), turn @ r0)
     poses = {"bar": bar}
     for side, theta in zip(("l", "r"), levers):
         poses[f"cup_{side}"] = mk.joint_pose(mk.MECH.joints[f"cup_{side}_on"], 0.0, bar)
@@ -113,17 +113,67 @@ def test_idle_scores_0_the_right_cup_lies_across_the_joint(m):
     assert m.score(None) == 0.0
 
 
-def test_the_left_cup_released_with_nobody_holding_drops_the_bar_and_that_scores_0_for_good(m):
+ON_BENCH = -(P.BAR_Z - P.CUP_R)  # dz: the cups' rims (the bar's lowest point) on the bench
+BODIES = ("bar", "cup_l", "cup_r", "lever_l", "lever_r")
+
+
+def moving_at(v):
+    """Every body of the bar moving at ``v`` (m/s, world), not turning."""
+    return {n: (np.asarray(v, dtype=float), np.zeros(3)) for n in BODIES}
+
+
+def test_the_bar_let_go_on_the_wall_falls_onto_the_bench_and_that_scores_0_for_good(m):
     started(m)
     stepped(m, levers=(UP, DOWN), time=0.5)  # left lever up over centre: the left seal is cut
     assert not m.sealed("l") and any("l lever up" in e for _, e in m.STATE["events"])
-    stepped(m, dz=-(P.BAR_Z - P.CUP_R), levers=(UP, DOWN), time=1.0)  # the bar has fallen onto the bench
-    assert m.STATE["fell"] == pytest.approx(1.0)
-    stepped(m, dy=-P.MOVE, levers=(DOWN, DOWN), time=5.0)  # even put back up and locked: the fall stands
-    assert m.score(None) == 0.0
+    stepped(m, dz=ON_BENCH, levers=(UP, DOWN), time=0.6)  # the next step: the bar on the bench, 22.5 mm down
+    assert m.STATE["fell"] == pytest.approx(0.6) and "as from a 22.5 mm drop" in m.STATE["events"][-1][1]
+    stepped(m, dz=ON_BENCH, levers=(UP, UP), time=1.0)
+    stepped(m, dy=-P.MOVE, levers=(UP, UP), press=(P.PRESS_N + 2, P.PRESS_N + 2), time=5.0)  # even put back up on tile and both locked: the fall stands
+    stepped(m, dy=-P.MOVE, levers=(DOWN, DOWN), press=(P.PRESS_N + 2, P.PRESS_N + 2), time=5.05)
+    stepped(m, dy=-P.MOVE, levers=(DOWN, DOWN), time=6.0)
+    assert m.sealed("l") and m.sealed("r") and m.score(None) == 0.0
 
 
-def test_moved_clear_with_one_lever_locked_scores_half_and_both_score_1(m):
+def test_set_down_gently_on_the_bench_and_put_back_on_tile_scores_as_the_remount(m):
+    """Released while held, lowered onto the bench at 30 mm/s, left there, lifted, moved and locked: 1.0."""
+    started(m)
+    stepped(m, levers=(UP, UP), time=0.5)
+    for i, dz in enumerate((-0.006, -0.012, -0.018, ON_BENCH + 0.0015)):
+        stepped(m, dz=dz, levers=(UP, UP), speeds=moving_at((0.0, 0.0, -0.03)), time=0.6 + 0.2 * i)
+    stepped(m, dz=ON_BENCH, levers=(UP, UP), time=1.5)  # on the bench
+    stepped(m, dz=ON_BENCH, levers=(UP, UP), time=3.0)
+    assert m.STATE["fell"] is None and any("onto the bench as from a 3.0 mm drop" in e for _, e in m.STATE["events"])  # 4.5 - 1.5 mm + 0.05 mm
+    stepped(m, dz=-0.010, levers=(UP, UP), speeds=moving_at((0.0, 0.0, 0.03)), time=4.0)
+    stepped(m, dy=-P.MOVE, levers=(UP, UP), press=(P.PRESS_N + 2, P.PRESS_N + 2), time=6.0)
+    stepped(m, dy=-P.MOVE, levers=(DOWN, DOWN), press=(P.PRESS_N + 2, P.PRESS_N + 2), time=6.05)
+    stepped(m, dy=-P.MOVE, levers=(DOWN, DOWN), time=8.0)
+    assert m.sealed("l") and m.sealed("r") and m.score(None) == 1.0
+
+
+@pytest.mark.parametrize("over_mm, down, fell", [(9.5, 0.0, False), (10.5, 0.0, True), (8.0, 0.16, False), (9.0, 0.18, True), (5.0, 0.40, True)])
+def test_the_bar_falls_when_its_last_step_down_plus_v2_over_2g_onto_the_bench_reaches_10_mm(m, over_mm, down, fell):
+    """In the step before it touches: ``over_mm`` over the bench, coming down at ``down`` m/s (let go: 0)."""
+    started(m)
+    stepped(m, levers=(UP, UP), time=0.5)
+    stepped(m, dz=ON_BENCH + over_mm / 1000, levers=(UP, UP), speeds=moving_at((0.0, 0.0, -down)), time=1.0)
+    stepped(m, dz=ON_BENCH, levers=(UP, UP), time=1.05)
+    assert (m.STATE["fell"] is not None) == fell
+
+
+@pytest.mark.parametrize("speed, struck", [(0.30, False), (0.50, True)])
+def test_a_cup_meeting_the_tiles_at_0_44_m_s_or_more_struck_them(m, speed, struck):
+    assert m.STRIKE_MPS == pytest.approx(0.443, abs=1e-3)
+    started(m)
+    stepped(m, levers=(UP, UP), time=0.5)
+    stepped(m, dx=-0.005, dy=-P.MOVE, levers=(UP, UP), speeds=moving_at((speed, 0.0, 0.0)), time=1.0)  # 5 mm off the wall, coming in
+    stepped(m, dy=-P.MOVE, levers=(UP, UP), press=(P.PRESS_N + 2, P.PRESS_N + 2), time=1.05)
+    stepped(m, dy=-P.MOVE, levers=(DOWN, DOWN), press=(P.PRESS_N + 2, P.PRESS_N + 2), time=1.1)
+    stepped(m, dy=-P.MOVE, levers=(DOWN, DOWN), time=3.0)
+    assert (m.STATE["fell"] is not None) == struck and m.score(None) == (0.0 if struck else 1.0)
+
+
+def test_moved_clear_one_seal_or_both_off_level_score_half_both_level_score_1(m):
     started(m)
     stepped(m, levers=(UP, UP), time=0.5)  # both released (the right one was not sealed)
     stepped(m, dy=-P.MOVE, levers=(UP, UP), press=(P.PRESS_N + 2, P.PRESS_N + 2), time=2.0)

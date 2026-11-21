@@ -52,7 +52,7 @@ import parts as P  # noqa: E402
 DT = 0.05  # s: one control step (20 Hz)
 BACK = 0.08  # m: a hand at the grip comes in and leaves along its approach from this far back
 SIDE_BACK, SIDE_UP = 0.035, 0.040  # m: a lever hand comes down from SIDE_UP over a point SIDE_BACK out along its approach, then in; it leaves the same way (from 80 mm out along the bar, the right arm runs into its joint limits)
-LEVER_GRIP = 0.10  # share of 94 mm told the fingers on a lever's top and bottom edges: 9.4 mm on about 30 mm across, the finger drive's 50 N per pad (5000 N/m, capped at 50 N)
+LEVER_GRIP = 0.21  # share of 94 mm told the fingers on a lever's top and bottom edges: 19.7 mm on the 34 mm the slanted pinch reads, 36 to 38 N per pad (gb5d24), under the YAM's 40 N (told 16 mm: 43 to 45 N, gb5d23; 9.4 mm: the drive's cap of 50 N, gb5d22)
 LEVER_OPEN = 0.60  # the side pinch comes in and leaves opened to 56 mm only (wide open, its upper finger swings towards the housing)
 BAR_GRIP = 0.30  # on the grip: 28 mm told on 38 mm, 25 N per pad
 BAR_GRIP_OPEN = 0.60  # a hand comes to the grip and leaves it opened to 56 mm only

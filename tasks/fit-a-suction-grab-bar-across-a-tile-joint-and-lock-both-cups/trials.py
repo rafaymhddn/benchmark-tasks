@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Checks of the grab bar task in the simulator, no arm (task.py).
 
-    scripts/rta simpy <id> mech/tasks/grab_bar/trials.py /workspace/robocurve/outputs/<id> [rest,unheld,held,pull,twoseals] [seed=N]
+    scripts/rta simpy <id> mech/tasks/grab_bar/trials.py /workspace/robocurve/outputs/<id> [rest,unheld,setdown,held,pull,twoseals] [seed=N]
 
 ``rest``  the first pictures (top camera and both wrist cameras, as rendered and at the size a policy gets) and 3 s
           with nobody touching anything: how far every body moves, the levers' angles, the seals, the score.
-``unheld`` (a) the left lever lifted over centre with nobody holding: the seal goes and the bar drops off the wall.
+``unheld`` (a) the left lever lifted over centre with nobody holding: the seal goes and the bar drops off the wall
+           onto the bench (the fall rule: 0).
+``setdown`` the trial's hand (pushes at the bar's middle of mass) holds the bar, both levers lifted, lowers it 3 mm off
+           the wall onto the bench at 30 mm/s, leans it there on the tiles, lets it rest, lifts it, moves it 60 mm
+           towards -y and locks both cups pressed on: set down gently, the score is the remount's.
 ``held``   (b) the bar held by its left cup: the right lever lifted, then pushed down with a rising push while the
            right cup is pressed on across the joint: the push at which it passes centre, against LEVER_N; no seal.
 ``pull``   (c) the sealed bar pulled out with HOLD_N: it stays; the seal cut and HOLD_JOINT_N: it comes away.
@@ -112,7 +116,8 @@ def _bar_off(m) -> dict:
 
 def unheld(embodiment, out: Path, seed: int) -> dict:
     """(a) The start, nobody holding the bar: the left lever's tip pushed towards up with 1.5 x LEVER_N until it passes
-    centre, then let be. The seal goes, the lever springs up, and the bar comes off the wall and drops."""
+    centre, then let be. The seal goes, the lever springs up, and the bar comes off the wall and drops onto the bench:
+    the fall rule (task.check_fall) reads the drop and the score is 0."""
     from inspect_robots import Scene
 
     import parts as P
@@ -134,8 +139,128 @@ def unheld(embodiment, out: Path, seed: int) -> dict:
         if passed is None and theta < P.LEVER_CENTRE_DEG:
             passed = t
         rows.append({"t": round(t, 2), "lever deg": round(theta, 1), "sealed": m.sealed("l"), **_bar_off(m)})
-    found = {"passed centre at s": passed, "rows (every 0.25 s)": rows[4::5], "fell at s": m.STATE["fell"], "score": m.score(None), "events": m.report()["events"]}
+    found = {"passed centre at s": passed, "rows (every 0.25 s)": rows[4::5], "fell at s": m.STATE["fell"], "score": m.score(None), "events": m.report()["events"],
+             "rule": {"DROP_M mm": 1000 * m.DROP_M, "STRIKE_MPS": round(m.STRIKE_MPS, 3)}}  # fmt: skip
     print(f"UNHELD {json.dumps(found, default=str)}", flush=True)
+    return found
+
+
+SPRING, DAMP = 10.0, 3.3  # N/m, N s/m: the trial's hand pulls the bar's origin towards its target (critically damped at 20 Hz)
+TURN_K, TURN_C = 0.1, 0.006  # N m/rad, N m s: and keeps the bar turned as built
+
+
+def _hand(m, target, speed=(0.0, 0.0, 0.0), lift=1.0, press=0.0, at_b=None) -> None:
+    """The trial's hand on the bar until the next call: ``lift`` times the whole bar's weight up at its middle of mass
+    (bar, cups and levers), a spring-damper pulling the bar's origin towards ``target`` (world) moving at ``speed``,
+    ``press`` N into the wall at ``at_b`` (B; None: the middle of mass) and a torque keeping it turned as built."""
+    import parts as P
+
+    mk = m.mk
+    masses = {"bar": P.BAR_MASS - 2 * P.CUP_MASS - 2 * P.LEVER_MASS, "cup_l": P.CUP_MASS, "cup_r": P.CUP_MASS, "lever_l": P.LEVER_MASS, "lever_r": P.LEVER_MASS}
+    com = sum(mass * _com(mk, n) for n, mass in masses.items()) / sum(masses.values())
+    at = _com(mk, "bar")
+    p, r = mk.pose("bar")
+    v, w = mk.velocity("bar")
+    f = np.array([0.0, 0.0, lift * P.BAR_MASS * 9.81]) + SPRING * (np.asarray(target, dtype=float) - p) + DAMP * (np.asarray(speed, dtype=float) - v)
+    torque = np.cross(com - at, f)
+    if press:
+        fp = np.array([press, 0.0, 0.0])
+        torque += np.cross((com if at_b is None else p + r @ np.asarray(at_b, dtype=float)) - at, fp)
+        f = f + fp
+    e = mk.built_pose("bar")[1] @ r.T  # the turn back to as built
+    torque += TURN_K * 0.5 * np.array([e[2, 1] - e[1, 2], e[0, 2] - e[2, 0], e[1, 0] - e[0, 1]]) - TURN_C * w
+    mk.push("bar", force=tuple(f), torque=tuple(torque))
+
+
+def setdown(embodiment, out: Path, seed: int) -> dict:
+    """Set down gently and put back: the trial's hand (``_hand``) holds the bar pressed on (30 N), both levers are
+    lifted over centre (a pull rising 1 N a step from 10 N at the tip; with 15 N on and 33 N pulled at once, the right
+    lever dragged the bar 209 mm along the wall: gb5t9), the bar is taken 3 mm off the wall and lowered at 30 mm/s until its cups' rims stand on the
+    bench, leaned on the tiles (4 N) and left there 1 s with nothing carrying it, lifted, moved 60 mm towards -y, put
+    back on the wall at 30 mm/s, pressed on with 30 N while each lever is turned down with a torque rising to that of
+    30 N at its tip, and let go.
+    The fall rule must read a gentle landing (no fall), the seals must be made, and the end must score 1.0."""
+    from inspect_robots import Scene
+
+    import parts as P
+
+    m = embodiment.task.module
+    mk = m.mk
+    embodiment.reset(Scene(id="setdown", instruction=m.INSTRUCTION), seed=seed)
+    embodiment.step(_hold())
+    hz = float(embodiment.info.control_hz)
+    p0 = mk.built_pose("bar")[0]
+    off, low = np.array([-0.003, 0.0, 0.0]), np.array([0.0, 0.0, -(P.BAR_Z - P.CUP_R) - 0.002])  # 3 mm off the wall; rims 2 mm into the bench
+    rows = []
+
+    def run(seconds, start, end=None, label="", **kw):
+        """The hand's target from ``start`` to ``end`` (world) at V, then held there, for ``seconds``."""
+        end = start if end is None else end
+        n, span, most = int(round(seconds * hz)), float(np.linalg.norm(end - start)), 0.0
+        for i in range(n):
+            u = min(1.0, (i / hz) * V / span) if span else 1.0
+            target = start + u * (end - start)
+            _hand(m, target, (end - start) / span * V if span and u < 1.0 else np.zeros(3), **kw)
+            yield i
+            embodiment.step(_hold())
+            most = max(most, float(np.linalg.norm(mk.pose("bar")[0] - target)))
+        rows.append({"phase": label, "t": round(mk.now(), 2), "most off the hand's target mm": round(1000 * most, 1), "bar from its start mm": [round(1000 * float(x), 1) for x in mk.pose("bar")[0] - p0],
+                     "lowest over the bench mm": round(1000 * m.lowest_z(), 1), "sealed": {s: m.sealed(s) for s in m.SIDES}, "fell at s": m.STATE["fell"],
+                     "levers deg": {s: round(math.degrees(m.LEVERS[s].theta()), 1) for s in m.SIDES}, "score": m.score(None)})  # fmt: skip
+
+    V = 0.030  # m/s: the hand's moves
+    for _ in run(0.5, p0, press=30.0, label="held on the wall"):
+        pass
+    for side in m.SIDES:  # both levers lifted over centre, the hand pressing the bar on with 30 N; the pull at the tip rises 1 N a step from 10 N
+        lifted = False
+        for i in run(1.5, p0, press=30.0, label=f"{side} lever lifted"):
+            lifted = lifted or m.LEVERS[side].theta() < P.CENTRE_RAD
+            if lifted:
+                m.mk.push(f"lever_{side}")
+            else:
+                _, down = _lever(m, side)
+                _push_tip(m, side, min(1.5 * P.LEVER_N, 10.0 + i), -down)
+        m.mk.push(f"lever_{side}")
+    for _ in run(0.5, p0, p0 + off, label="off the wall"):
+        pass
+    for _ in run(1.5, p0 + off, p0 + off + low, label="lowered onto the bench"):
+        pass
+    for _ in run(0.5, p0 + off + low, p0 + low, label="back to the tiles"):
+        pass
+    for _ in run(0.5, p0 + low, press=4.0, label="leaned on the tiles"):
+        pass
+    for _ in run(1.0, p0 + low, lift=0.0, press=4.0, label="set down, resting"):
+        pass
+    for _ in run(0.5, p0 + low, p0 + off + low, label="taken up, off the wall"):
+        pass
+    for _ in run(1.5, p0 + off + low, p0 + off, label="lifted"):
+        pass
+    for _ in run(P.MOVE / V + 0.5, p0 + off, p0 + off + np.array([0.0, -P.MOVE, 0.0]), label="moved"):
+        pass
+    moved = p0 + np.array([0.0, -P.MOVE, 0.0])
+    for _ in run(0.5, moved + off, moved, label="back on the wall"):
+        pass
+    for _ in run(0.5, moved, press=30.0, label="pressed on"):
+        pass
+    passed = {}
+    for side in m.SIDES:
+        ramp = int(round(3.0 * hz))
+        for i in run(4.0, moved, press=30.0, label=f"{side} lever turned down"):
+            if side not in passed and m.LEVERS[side].theta() > P.CENTRE_RAD:
+                passed[side] = round(30.0 * min(1.0, i / ramp), 1)
+            if side in passed:
+                m.mk.push(f"lever_{side}")
+            else:
+                _turn_lever(m, side, 30.0 * min(1.0, (i + 1) / ramp))
+        m.mk.push(f"lever_{side}")
+    mk.push("bar")
+    scores = []
+    for _ in range(int(round(3.0 * hz))):
+        embodiment.step(_hold())
+        scores.append(m.score(None))
+    found = {"phases": rows, "levers passed centre at tip N": passed, "score at the end": scores[-1], "1.0 from s": next((round(mk.now() - (len(scores) - i - 1) / hz, 2) for i, sc in enumerate(scores) if sc == 1.0), None),
+             "fell at s": m.STATE["fell"], "report": m.report()}  # fmt: skip
+    print(f"SETDOWN {json.dumps(found, default=str)}", flush=True)
     return found
 
 
@@ -268,7 +393,7 @@ def twoseals(embodiment, out: Path, seed: int) -> dict:
     return found
 
 
-TRIALS = {"rest": rest, "unheld": unheld, "held": held, "pull": pull, "twoseals": twoseals}
+TRIALS = {"rest": rest, "unheld": unheld, "setdown": setdown, "held": held, "pull": pull, "twoseals": twoseals}
 
 
 def main() -> int:

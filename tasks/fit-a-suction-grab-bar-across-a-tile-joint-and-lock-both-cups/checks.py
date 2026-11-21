@@ -30,7 +30,7 @@ STIFFNESS = np.array([C.SHOULDER["stiffness"]] * 3 + [C.WRIST["stiffness"]] * 3)
 EFFORT = np.array([C.SHOULDER["effort"]] * 3 + [C.WRIST["effort"]] * 3)
 HEIGHT_LIMIT = 0.16  # m over the bench: the highest grasp
 TWIST_LIMIT = 1.0  # N m: the most twist in a pinch
-PAD_LIMIT = 50.0  # N per pad (the finger drive's effort)
+PAD_LIMIT = 40.0  # N per pad: the YAM's fingers give about 40 N each (the simulator's finger drive stops at 50 N)
 
 
 def frame(closing, approach) -> np.ndarray:

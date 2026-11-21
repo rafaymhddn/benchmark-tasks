@@ -69,13 +69,16 @@ OBJECTS = list(mk.MECH.bodies.values())
 CLEAR = 0.03  # m: both grippers' grasp points at least this far from the bar (spec)
 RESTING = (0.01, 0.1)  # m/s, rad/s: the bar (its cups with it) and the levers at rest
 LEVEL_DEG = 10.0  # the bar within this of level
-FELL_Z = 0.002  # m: the bar's lowest point this near the bench top: it fell
+FELL_Z = 0.002  # m: the bar's lowest point this near the bench top: it is on the bench
+G = 9.81  # m/s2
+DROP_M = 0.010  # m: the bar comes down onto the bench as hard as a free drop from this height or more: it fell (let go this high or higher; lowered onto it at 0.17 m/s or more)
+STRIKE_MPS = math.sqrt(2.0 * G * DROP_M)  # m/s (0.44): a cup meeting the tiles this fast or faster struck them, as hard as that drop
 STATE: dict = {}
 
 
 def begin() -> None:
     STATE.clear()
-    STATE.update(events=[], fell=None, press={s: [] for s in SIDES}, refused={s: [] for s in SIDES}, most_press={s: 0.0 for s in SIDES})
+    STATE.update(events=[], fell=None, last=None, press={s: [] for s in SIDES}, refused={s: [] for s in SIDES}, most_press={s: 0.0 for s in SIDES})
 
 
 begin()
@@ -133,24 +136,54 @@ def pressed(side: str) -> float:
     return max((f for t, f in STATE["press"][side] if now - t <= P.PRESS_S + 1e-9), default=0.0)
 
 
-def lowest_z() -> float:
-    """m over the bench: the bar's lowest point (its cups' rims, the grip's underside)."""
-    zs = []
+def lowest() -> tuple[float, float]:
+    """(m over the bench, m/s down): the bar's lowest point (its cups' rims, the grip's underside) and its speed
+    downwards, from the left cup's motion (welded to the bar; a cup's frame is its middle of mass)."""
+    points = []
     for s in SIDES:
         middle, axis = cup_frame(s)
         down = np.array([0.0, 0.0, -1.0]) + axis * axis[2]  # straight down, within the rim's plane
         n = np.linalg.norm(down)
-        zs.append(float(middle[2] + (P.CUP_R * down[2] / n if n > 1e-9 else 0.0)))
+        points.append(middle + (P.CUP_R * down / n if n > 1e-9 else 0.0))
     p, r = mk.pose("bar")
-    zs.append(float((p + r @ np.array([P.GRIP_X, 0.0, 0.0]))[2]) - P.GRIP_D / 2)
-    return min(zs) - TOP
+    points.append(p + r @ np.array([P.GRIP_X, 0.0, 0.0]) - np.array([0.0, 0.0, P.GRIP_D / 2]))
+    low = min(points, key=lambda q: float(q[2]))
+    v, w = mk.velocity("cup_l")
+    return float(low[2]) - TOP, -float((v + np.cross(w, low - mk.pose("cup_l")[0]))[2])
+
+
+def lowest_z() -> float:
+    return lowest()[0]
+
+
+def check_fall(now: float, forces: dict) -> None:
+    """The bar fell if its lowest point comes down onto the bench (from over FELL_Z to under it in one step) as hard as
+    a free drop from DROP_M or more: the height it came down in that step plus the height a free fall needs for its
+    speed in the step before (a dropped bar: its drop; one lowered at w: w * 0.05 s + w^2 / 2g). It struck the tiles
+    if a cup meets them (its press from 0 to more) after a step at STRIKE_MPS or more towards them."""
+    low, down = lowest()
+    toward = {s: float(mk.velocity(f"cup_{s}")[0][0]) for s in SIDES}  # m/s into the wall
+    last, why = STATE["last"], None
+    if last is not None and low <= FELL_Z < last["low"]:
+        drop = last["low"] - low + max(0.0, last["down"]) ** 2 / (2.0 * G)
+        why = f"the bar came down onto the bench as from a {1000 * drop:.1f} mm drop"
+        STATE["events"].append((now, why))
+        why = why if drop >= DROP_M else None
+    for s in SIDES:
+        if last is not None and forces[s] > 0.0 >= last["press"][s] and last["toward"][s] >= STRIKE_MPS:
+            why = f"the {s} cup met the tiles at {last['toward'][s]:.2f} m/s"
+            STATE["events"].append((now, why))
+    if why and STATE["fell"] is None:
+        STATE["fell"] = now
+    STATE["last"] = {"low": low, "down": down, "toward": toward, "press": dict(forces)}
 
 
 @mk.on_step
 def step() -> None:
     now = mk.now()
+    forces = {}
     for s in SIDES:
-        force = mk.contact_force(f"cup_{s}", "panel")
+        force = forces[s] = mk.contact_force(f"cup_{s}", "panel")
         STATE["press"][s] = [(t, f) for t, f in STATE["press"][s] if now - t <= 1.0] + [(now, force)]
         STATE["most_press"][s] = max(STATE["most_press"][s], force)
         change = LEVERS[s].step()
@@ -174,9 +207,7 @@ def step() -> None:
             STATE["events"].append((now, f"{s} lever up, cup released"))
             _show_indicator(s, False)
             mk.redraw()
-    if STATE["fell"] is None and lowest_z() <= FELL_Z:
-        STATE["fell"] = now
-        STATE["events"].append((now, "the bar touched the bench"))
+    check_fall(now, forces)
 
 
 def bar_level_deg() -> float:
@@ -205,10 +236,12 @@ def at_rest() -> bool:
 
 
 def score(objects) -> float:
-    """0 if the bar has touched the bench at any moment (it fell). Otherwise, with both grippers 30 mm or more from the
-    bar and the bar and the levers at rest: 0 if either cup's rim lies within JOINT_MARGIN (1/2 in) of the joint or EDGE_MARGIN
-    of its tile's outer edges, or no seal is made; 0.5 for both cups clear and one seal; 1.0 for both cups clear, both seals made (both levers down, green)
-    and the bar within 10 deg of level. Not let go or not at rest: 0."""
+    """0 if the bar has fallen or struck the tiles at any moment (``check_fall``); set down on the bench more gently,
+    it scores as its end state. Otherwise, with both grippers 30 mm or more from the bar and the bar and the levers at
+    rest: 0 if either cup's rim lies within JOINT_MARGIN (1/2 in) of the joint or EDGE_MARGIN of its tile's outer
+    edges, or no seal is made; 1.0 for both cups clear, both seals made (both levers down, green) and the bar within
+    LEVEL_DEG of level; 0.5 for both cups clear and one seal, or both seals with the bar more than LEVEL_DEG off level.
+    Not let go or not at rest: 0."""
     if STATE["fell"] is not None or not (let_go() and at_rest()):
         return 0.0
     seals = sum(sealed(s) for s in SIDES)

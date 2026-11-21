@@ -82,7 +82,7 @@ EDGE_MARGIN = 0.005  # m: and at least this far from the outer edges of the tile
 FACE_TILT_DEG = 3.0  # deg: a cup's face within this of the tile's plane counts as flat on it
 FACE_GAP = 0.001  # m: and within this of the tile's face
 RUBBER_FRICTION = (0.9, 0.8)  # static, dynamic: the rubber cups on glazed tile
-LEVER_CONTACT = (25000.0, 32.0)  # N/m, N s/m: what touches a lever presses in 2 mm at 50 N, damped (a 10 g lever pinched rigidly between two finger pads chattered at 0.3-0.5 m/s and let go: check run gb5d8)
+LEVER_CONTACT = (25000.0, 32.0)  # N/m, N s/m: what touches a lever presses in 1.6 mm at 40 N, damped (a 10 g lever pinched rigidly between two finger pads chattered at 0.3-0.5 m/s and let go: check run gb5d8)
 BAR_FRICTION = (0.5, 0.45)  # the bar's plastic
 
 # --- the panel: two white glossy wall tiles on an upright plywood board ---------------------------------------------
@@ -107,8 +107,8 @@ FIGURES = (
     Figure("Cup diameter", ("CUP_D",), "listing", f"listing: 'Durchmesser der Saugnäpfe 9,5 cm' ({SANISMART})", "caliper"),
     Figure("Cups' spacing", ("CUP_PITCH",), "estimate", "estimate: 181 mm between the cups' middles puts the levers' outer faces at the ends of the maker's 290 mm", "ruler"),
     Figure("Cup, housing and grip sections", ("CUP_T", "HOUSING_D", "HOUSING_T", "GRIP_D"), "estimate", "estimate: an 8 mm cup, a 70 x 32 mm housing and 45 mm to the grip's front make the maker's 8.5 cm depth; a 38 mm grip for a hand", "caliper"),
-    Figure("Lever size, pivot", ("LEVER_ARM", "LEVER_L", "LEVER_WIDTH", "LEVER_T", "LEVER_PIVOT"), "estimate", "estimate: a 45 x 30 x 5 mm lever at each housing's outer end on a vertical pivot, lying along it when locked, as the makers' photos show the named bars' levers; worked 32 mm out", "caliper"),
-    Figure("Lever travel, centre, cam", ("LEVER_DEG", "LEVER_CENTRE_DEG", "LEVER_CAM_DEG"), "estimate", "estimate: an over-centre flip lever: 110 deg from released to locked, centre 15 deg short of locked, loose above 70 deg", "protractor app"),
+    Figure("Lever size, pivot", ("LEVER_ARM", "LEVER_L", "LEVER_WIDTH", "LEVER_T", "LEVER_PIVOT"), "estimate", f"estimate: the makers give the levers' action, not their sizes ('tilting vacuum levers', 'First, press down one tilting lever and then press down the second', 'Release both latches': {DRIVE_TAG}; 'Umlegen des Hebels': {WENKO_2019}); a 45 x 30 x 5 mm lever fitted inside the listed 11.5 x 8.5 cm section at each housing's outer end on a vertical pivot, lying along it when locked, where the makers' photos show the levers; worked 32 mm out", "caliper"),
+    Figure("Lever travel, centre, cam", ("LEVER_DEG", "LEVER_CENTRE_DEG", "LEVER_CAM_DEG"), "estimate", f"estimate: no angles on the makers' pages ('The tilting vacuum levers must be loose at this point' while the discs are pressed on: {DRIVE_TAG}); an over-centre flip lever: 110 deg from released to locked, centre 15 deg short of locked, loose up to 70 deg", "protractor app"),
     Figure("Lever force at centre, held locked", ("LEVER_N", "LEVER_HOLD"), "estimate", f"estimate: 22 N 32 mm out from the pivot (0.70 N m), a firm thumb's push; the US twin's maker: 'The resistance of the suction pressure generated must be clearly felt' ({DRIVE_TAG})", "luggage scale on the lever's tip"),
     Figure("Press a seal needs", ("PRESS_N", "PRESS_S"), "estimate", f"estimate: 12 N, so that a hand pressing the bar on seals it and a touch does not ('durch Aufdrücken des Saugtellers und Umlegen des Hebels': {WENKO_2019}); within 0.2 s of the lock", "panel lying on a kitchen scale"),
     Figure("Hold on tile; across the joint", ("HOLD_N", "HOLD_JOINT_N"), "estimate", f"estimate: well under the listing's 'Gleichgewichtsstütze, die bis zu 30 kg belastbar ist' (294 N for the bar: {SANISMART}); across the joint air gets in and only the rubber's grip holds", "luggage scale on the grip"),
@@ -121,7 +121,7 @@ FIGURES = (
     Figure("Board", ("BOARD_W", "BOARD_H", "BOARD_T"), "listing", f"listing: 'Multiplex-Platte Birke', 'Stärke 1,8 cm', cut to 520 x 400 mm in the shop ({OBI_BOARD})", "tape measure, caliper"),
     Figure("A cup flat on the tile", ("FACE_TILT_DEG", "FACE_GAP"), "estimate", "estimate: the rule's tolerance for a cup lying on the tile: 3 deg, 1 mm", "-"),
     Figure("Frictions", ("RUBBER_FRICTION", "BAR_FRICTION"), "estimate", "estimate: soft rubber on glazed tile 0.9 / 0.8; hard plastic 0.5 / 0.45", "an unsealed cup under a known weight pulled along the tile with the luggage scale"),
-    Figure("A lever's contact", ("LEVER_CONTACT",), "estimate", "estimate: the finger pads' rubber gives 2 mm at 50 N", "-"),
+    Figure("A lever's contact", ("LEVER_CONTACT",), "estimate", "estimate: the finger pads' rubber gives 1.6 mm at 40 N", "-"),
 )
 
 # --- derived (not figures) -------------------------------------------------------------------------------------------
