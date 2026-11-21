@@ -123,11 +123,11 @@ CLIFF_STRIPE_RGB = (0.82, 0.22, 0.14)  # high-contrast vermilion edge trim along
 # --- Fastened sloped melamine drainboard on left end of worktop ---
 DRAIN_D = 0.360  # m: depth along x, [0.145, 0.505] (estimate: cut of the board, matches worktop depth)
 DRAIN_L = 0.170  # m: length along slope from foot y = +0.110 to ~+0.280 (estimate: cut of the 360 mm board)
-DRAIN_T = 0.012  # m: board thickness, 12.0 mm melamine shelf/cutting board (estimate)
+DRAIN_T = 0.012  # m: simulator slab; the real part is a wedge cut from a 12 mm melamine board (same top face)
 DRAIN_FOOT_Y = 0.110  # m: flush transition seam onto level worktop (0 mm step)
-SLOPE_DEG = 3.0  # estimate: gentle kitchen-drainboard slope down toward -y; sin(3.0 deg) * 170 mm = 8.90 mm shim
+SLOPE_DEG = 3.0  # estimate: gentle kitchen-drainboard slope down toward -y; sin(3.0 deg) * 170 mm = 8.90 mm at the wedge's high end
 SLOPE_RAD = math.radians(SLOPE_DEG)
-SHIM_H = round(DRAIN_L * math.sin(SLOPE_RAD), 4)  # 0.0089 m derived riser strip at the outer end for SLOPE_DEG
+SHIM_H = round(DRAIN_L * math.sin(SLOPE_RAD), 4)  # 0.0089 m: the wedge's thickness at its high end for SLOPE_DEG
 DRAIN_FRICTION = (0.55, 0.48)  # estimate: typical melamine board static/dynamic friction
 DRAIN_RGB = (0.62, 0.66, 0.70)  # cool slate-grey melamine board, distinct in brightness from worktop and glass bottle
 START_TAPE_RGB = (0.18, 0.20, 0.22)  # dark visual start-line tape at 140 mm up-slope
@@ -229,12 +229,12 @@ KEY_FIGURES: tuple[KeyFigureRow, ...] = (
         "38 mm, hornbach.de/c/kueche/kuechenarbeitsplatten/S1641); 520 x 360 mm is a cut-off with the store cutting service",
     ),
     KeyFigureRow(
-        "Drainboard length, thickness, shim height, slope angle",
+        "Drainboard wedge length, simulator slab, high end, slope angle",
         "DRAIN_L, DRAIN_T, SHIM_H, SLOPE_DEG",
         f"{1000 * DRAIN_L:.1f} mm, {1000 * DRAIN_T:.1f} mm, {1000 * SHIM_H:.1f} mm, {SLOPE_DEG:.1f} deg",
         "estimate",
-        "a flat 12 mm melamine-covered shelf/cutting board (standard hardware-store melamine board class) cut to "
-        "360 x 170 mm; gentle kitchen-drainboard slope of 3.0 deg; shim height 8.9 mm = 170 mm x sin(3.0 deg)",
+        "our fixture: a wedge cut with a table-saw taper jig from a 12 mm melamine-covered board (hardware-store "
+        "class), 360 x 170 mm, 8.9 mm = 170 mm x sin(3.0 deg) at its high end to a feather edge; slope 3.0 deg",
     ),
     KeyFigureRow(
         "Release distance up-slope from drainboard foot",
@@ -410,7 +410,8 @@ def worktop_shapes() -> list:
 
 
 def drainboard_shapes() -> list:
-    """Sloped 360 x 170 x 12 mm melamine drainboard with a flush non-solid start-line tape mark at 140 mm up-slope."""
+    """Simulator slab for the 360 x 170 mm melamine wedge (same 3.0 deg top face, its lower part inside the worktop),
+    with a flush non-solid start-line tape mark at 140 mm up-slope."""
     board = box((DRAIN_D, DRAIN_L, DRAIN_T), pos=(0.0, 0.0, 0.0), color=DRAIN_RGB, friction=DRAIN_FRICTION)
     tape_y = RELEASE_UP_M - 0.5 * DRAIN_L  # local y along u_hat from board centre
     tape = box(

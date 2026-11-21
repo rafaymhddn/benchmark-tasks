@@ -21,7 +21,7 @@ the edge, hard bats it off. Stopping it safely earns `0.5`; standing it upright 
 | Bottle sizes & mass (`voss_375`) | `BOTTLE_D, BOTTLE_H, BOTTLE_MASS` | `54x229 mm`, `700 g` | listing: desertcart.sg/products/258462045 "5.4 x 5.4 x 22.9 cm" (cap incl.); uke.co.za/product/voss-still-water-375-ml-glass-bottle/ "Weight 0.7 kg" (full bottle as sold). Desertcart's "357.2 g" is under the 375 g of water: the empty bottle (estimate), 357 + 375 = 732 g ≈ 0.7 kg |
 | Axial inertia ratio & angular damping | `ROT_INERTIA_FACTOR, BOTTLE_ANGULAR_DAMPING` | `0.35`, `0.05 /s` | estimate: sealed water barely spins in a 2 s roll, so `I/(mR^2)` lies between glass shell (~0.20) and solid fill (0.50); damping: simulator standard |
 | Worktop thickness, width, depth | `WORKTOP_H, WORKTOP_W, WORKTOP_D` | `38 x 520 x 360 mm` | listing: HORNBACH decor worktop 34321 Oxid `4100x635x38 mm` (hornbach.de/c/kueche/kuechenarbeitsplatten/S1641), `520x360` cut-off |
-| Drainboard length, thickness, shim, slope | `DRAIN_L, DRAIN_T, SHIM_H, SLOPE_DEG` | `170`, `12`, `8.9 mm`, `3.0 deg` | estimate: 12 mm melamine shelf/cutting board cut to `360x170`; slope 3.0 deg; shim `8.9 = 170·sin 3°` |
+| Drainboard wedge | `DRAIN_L, SHIM_H, SLOPE_DEG` | `170`, `8.9 mm`, `3.0 deg` | our fixture: 12 mm melamine board cut to a `360x170` wedge, `8.9 = 170·sin 3°` at its high end, feather edge at the foot |
 | Release distance up-slope | `RELEASE_UP_M` | `140.0 mm` | protocol: the tape start mark `140 mm` up-slope of the foot seam |
 | Foot speed, crossing times, decel | `V_FOOT_MPS, T_150_S, T_300_S, ROLL_DECEL_MPS2` | `0.28 m/s`, `0.56 s`, `1.18 s`, `0.035 m/s^2` | estimate (physics + simulator; derivation below) |
 | Coaster outer Ø; recess & rim | `COASTER_OUT_D, COASTER_IN_D, COASTER_FLOOR_H, COASTER_RIM_H` | `100 mm`; `92 mm`, `4+3 mm` | maker's page (ikea.com/se/en/p/ikea-365-coaster-cork-30282946: "IKEA 365+ Coaster, cork, 10 cm"); recess/rim estimates from the maker's photo (page gives no thickness) |
@@ -40,7 +40,7 @@ times are given from the foot.
 
 Cm from midpoint between arm bases (`left` `(0, +30.5)`, `right` `(0, -30.5)`), `x` forward, `y` left:
 - **`worktop`:** `52.0 x 36.0 x 3.8 cm` (`x in [14.5, 50.5]`, `y in [-23.0, +29.0]`), F-clamped (`kinematic=True`), red cliff stripe at `y = -23.0 cm`.
-- **`drainboard`:** `36.0 x 17.0 x 1.2 cm` (`y in [+11.0, +28.0]`), our fixture, stuck to the worktop with double-sided mounting tape at its low end and under the shim (`kinematic=True`).
+- **`drainboard`:** `36.0 x 17.0 cm` wedge (`y in [+11.0, +28.0]`), `8.9 mm` to a feather edge, our fixture, taped along its underside; simulated as a 12 mm slab with the same top face (`kinematic=True`).
 - **`bottle`:** VOSS 375 mL glass (`54.0 x 229.0 mm`, `700 g`), `(37.5, +24.9) cm`, cap `+x`, at rest at `t = 0.00 s`.
 - **`coaster`:** IKEA 365+ cork (`100 / 92 mm`, `4.0 + 3.0 mm`) taped to the worktop on its `(20.5, -2.0) cm` mark
   with double-sided mounting tape (a fixed rigid body).
@@ -96,9 +96,10 @@ At `320 x 176`, bottle, dark cap, drainboard, coaster, and cliff stripe sit unob
 ## First minutes of a real trial
 
 On the bench with the bought items (~12 min; caliper, 1 g scale, ruler, phone protractor, 60 fps video): (1) measure
-bottle Ø/height/mass and coaster Ø/recess/rim; (2) tape the drainboard down over the shim, read the slope, check the `0 mm`
-foot seam; (3) film five straightedge releases from the `14.0 cm` mark over marks at `0/5/15/30 cm`, read `v_foot`,
-`t_150`, `t_300`, drift against the predicted `0.28 m/s`, `0.56 s`, `1.18 s`, `0.0 mm`, and the release-to-foot time;
+bottle Ø/height/mass and coaster Ø/recess/rim; (2) tape the wedge down, read the slope, lay a straightedge over the foot
+seam (step under `0.5 mm`); (3) film five straightedge releases from the `14.0 cm` mark over marks at `0/5/15/30 cm`, read `v_foot`,
+`t_150`, `t_300`, drift against the predicted `0.28 m/s`, `0.56 s`, `1.18 s`, `0.0 mm`, and the release-to-foot time against the
+simulator's `2.81 s` (its `1.5 s` creep, above);
 any figure that differs is corrected in `parts.py` — scene, rules, tests follow from that one file.
 
 ## Seed, nearest tasks, and how to run
@@ -109,7 +110,7 @@ Nearest known-suite task: RoboDynamicExam S11 Cylinder Rescue Route Deliver (a s
 intercepted in a held tray); ours uses bare grippers on an open counter, then a regrasp that stands the bottle upright
 on a coaster. LIBERO, RoboCasa, SimplerEnv, BEHAVIOR-1K manipulate static items.
 
-Commands (repo root, in the container, no assets):
-- `python mech/tasks/rolling_bottle/parts.py` · `python -m pytest -q mech/tasks/rolling_bottle/test_rolling_bottle.py` (14 tests)
-- `python mech/tasks/rolling_bottle/demo.py --quick` · `python mech/tasks/rolling_bottle/trials.py <out> roll_trace,stop_only` · `python mech/tasks/rolling_bottle/demo.py <out> --check`
+Commands (in the container, no assets, from this task's folder):
+- `python parts.py` · `python -m pytest -q test_rolling_bottle.py` (14 tests)
+- `python demo.py --quick` · `python trials.py <out> roll_trace,stop_only` · `python demo.py <out> --check`
 - `inspect-robots run --embodiment yam_arena --policy <policy> -E task=mech/tasks/rolling_bottle/task.py -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 --instruction "Stop the rolling glass bottle before it goes over the edge of the worktop, then stand it upright on the cork coaster." --scorer task_score --max-steps 800 --seed 0`
