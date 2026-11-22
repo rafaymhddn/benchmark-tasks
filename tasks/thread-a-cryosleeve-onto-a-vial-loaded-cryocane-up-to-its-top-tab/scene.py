@@ -1,14 +1,13 @@
-"""The bodies and coaxial slide mechanism of the CryoCane sleeving task (zero write_pose, zero set_joint):
+"""The bodies of the CryoCane sleeving task (zero write_pose, zero set_joint, no joint between sleeve and cane):
 - ``prep_mat``: dark blue silicone bench strip (fixed), alignment ticks at the cane and sleeve start marks;
 - ``tray``: open 18/10 stainless transfer tray (free, 420 g) behind the prep mat;
 - ``cane``: 290 mm 5-place stepped aluminum Nalgene 5015-0001 CryoCane (free), starting trough-up with its 25 mm
   90-degree bent top ID tab facing the sleeve (-y) and its bullet-tapered straight bottom foot pointing left (+y);
 - ``vial_a``, ``vial_b``: two loose 1.8 mL Nunc 377267 round-bottom cryovials (12.5 x 49.0 mm, magenta sample, white
   cap) resting in open upward C-bays 3 and 2 of ``cane``;
-- ``sleeve``: 273 mm Nalgene 5016-0001 CryoSleeve (8-stave hollow octagonal tube, drawn opaque frosted ivory);
-- ``c_slv``, ``slv_s``, ``w_sleeve``: 265 mm prismatic slide along ``cane`` (5.0 N rest-following spring wipe, 35.0 N
-  if cocked > 0.35 N m); ``w_sleeve`` engages in-place right where ``sleeve`` stands once telescoped coaxially over the
-  straight foot (zero pose snap).
+- ``sleeve``: 273 mm Nalgene 5016-0001 CryoSleeve, a free 16-sided PVC tube (13.5 mm bore, 14.5 mm outside, drawn
+  opaque frosted ivory) in true contact with the cane's strip, clip arms and shelves and with the vials: 0.15 mm a side
+  when centred, so the robot keeps it straight; a cocked push wedges its rims and the friction stops it.
 """
 
 from __future__ import annotations
@@ -19,7 +18,7 @@ import numpy as np
 
 import mechkit as mk
 import parts as P
-from mechkit import body, box, capsule, cylinder, slide, weld
+from mechkit import body, box, capsule, cylinder
 
 MECHKIT_HELPER = True
 
@@ -34,7 +33,8 @@ MAGENTA = (0.88, 0.14, 0.56)
 WHITE_CAP = (0.95, 0.95, 0.97)
 FROSTED_IVORY = (0.92, 0.93, 0.88)
 SLEEVE_BAND = (0.30, 0.52, 0.58)
-SMOOTH_TROUGH = (0.15, 0.12)
+PVC_ON_METAL = (P.MU_PVC, P.MU_PVC_DYN)  # the cane's trough and the sleeve (combine "min": the lower of a pair wins)
+PP_SLIDING = (P.MU_PP, P.MU_PP_DYN)  # the vials
 
 VIALS = ("vial_a", "vial_b")
 
@@ -78,71 +78,49 @@ def build_tray(top: float) -> None:
     body("tray", shapes, pos=tray_start_pos(top), mass=P.TRAY_MASS, color=TRAY_RIM, friction=(0.6, 0.5), contacts=True)
 
 
+def _lip_plate(side: float, span_deg, y0: float, y1: float, lean_in: float = 0.0, core: bool = False):
+    """One flat clip-arm plate on ``side`` (+1: +x), tangent to the vial between the two angles of ``span_deg`` (from
+    straight down), running y0..y1 along the cane; ``lean_in`` (m) brings its y0 end that far towards the vial's axis.
+    ``core``: the plate's CORE_T solver core instead (same outer face, built inward, the vials pass through it)."""
+    a0, a1 = (math.radians(a) for a in span_deg)
+    am = 0.5 * (a0 + a1)
+    half = P.VIAL_R * math.tan(0.5 * (a1 - a0))
+    n = np.array([side * math.sin(am), 0.0, -math.cos(am)])  # outward from the vial's axis
+    thick = P.CORE_T if core else P.LIP_T
+    centre = np.array([0.0, 0.5 * (y0 + y1), P.VIAL_REST_Z]) + (P.VIAL_R + P.LIP_T - 0.5 * thick - 0.5 * lean_in) * n
+    theta = math.atan2(side * math.sin(am), -math.cos(am))  # turns the plate's thickness axis (z) onto n
+    beta = math.atan2(lean_in, y1 - y0)
+    rot = mk.axis_angle((0.0, 1.0, 0.0), theta) @ mk.axis_angle((1.0, 0.0, 0.0), beta)
+    return box((2.0 * half, y1 - y0, thick), pos=tuple(centre), quat=_quat(rot), color=ALUMINUM, friction=PVC_ON_METAL,
+               friction_combine="min", passes=VIALS if core else ())
+
+
 def build_cane(top: float) -> None:
+    """A flat 2.3 mm strip under the vials, two 0.5 mm clip-arm plates a side hugging them up to the 2.8 mm lip (with
+    a 14 mm lead-in at the foot end leaning 2 mm inward), 4 mm stepped shelves between the bays and the 26 mm upturned top tab: every
+    collider of the trough lies inside the sleeve's 13.5 mm bore (``test_cane_fits_inside_the_sleeve_bore``)."""
     nose_l = 0.014
     main_sp_l = P.TAB_SHOULDER_Y - nose_l
     nose_pitch = math.radians(-10.0)
+    trough = dict(color=ALUMINUM, friction=PVC_ON_METAL, friction_combine="min")
     shapes = [
-        box(
-            (0.0054, nose_l, P.SPINE_T),
-            pos=(0.0, 0.5 * nose_l, P.BASE_Z + 0.5 * P.SPINE_T + 0.0012),
-            quat=_quat(mk.axis_angle((1.0, 0.0, 0.0), nose_pitch)),
-            color=ALUMINUM,
-            friction=SMOOTH_TROUGH,
-            friction_combine="min",
-        ),
-        box(
-            (P.SPINE_W, main_sp_l, P.SPINE_T),
-            pos=(0.0, nose_l + 0.5 * main_sp_l, P.BASE_Z + P.SPINE_T / 2.0),
-            color=ALUMINUM,
-            friction=SMOOTH_TROUGH,
-            friction_combine="min",
-        ),
+        box((P.SPINE_W - 0.0003, nose_l, P.SPINE_T), pos=(0.0, 0.5 * nose_l, P.BASE_Z + 0.5 * P.SPINE_T + 0.0012),
+            quat=_quat(mk.axis_angle((1.0, 0.0, 0.0), nose_pitch)), **trough),
+        box((P.SPINE_W, main_sp_l, P.SPINE_T), pos=(0.0, nose_l + 0.5 * main_sp_l, P.BASE_Z + P.SPINE_T / 2.0), **trough),
+        # solver cores: same outer faces as the strip and nose, built inward; the vials pass through them
+        box((P.SPINE_W - 0.0003, nose_l, P.CORE_T), pos=(0.0, 0.5 * nose_l, P.BASE_Z + 0.5 * P.CORE_T + 0.0012),
+            quat=_quat(mk.axis_angle((1.0, 0.0, 0.0), nose_pitch)), passes=VIALS, **trough),
+        box((P.SPINE_W, main_sp_l, P.CORE_T), pos=(0.0, nose_l + 0.5 * main_sp_l, P.BASE_Z + P.CORE_T / 2.0), passes=VIALS, **trough),
     ]
-    rail_y0 = 0.018
-    rail_l = P.SHELF_YS[-1] - rail_y0
-    rail_cy = 0.5 * (rail_y0 + P.SHELF_YS[-1])
-    ca, sa = math.cos(P.RAIL_TILT_RAD), math.sin(P.RAIL_TILT_RAD)
-    dx_lip = -0.5 * P.RAIL_T * ca + 0.5 * P.RAIL_W * sa
-    dz_lip = 0.5 * P.RAIL_T * sa + 0.5 * P.RAIL_W * ca
-    cx = P.RAIL_INNER_HALF_X - dx_lip
-    cz = (P.FLOOR_Z + P.RAIL_H) - dz_lip
-    lead_l = rail_y0 - P.SHELF_YS[0]
-    lead_yaw = math.radians(11.0)
     for s in (-1.0, 1.0):
-        q_lead = _quat(mk.quat_to_matrix(mk.yaw_quat(-s * lead_yaw)) @ mk.axis_angle((0.0, 1.0, 0.0), s * P.RAIL_TILT_RAD))
-        shapes.append(
-            box(
-                (P.RAIL_T, lead_l, P.RAIL_W),
-                pos=(s * (cx - 0.0014), 0.5 * (P.SHELF_YS[0] + rail_y0), cz + 0.0004),
-                quat=q_lead,
-                color=ALUMINUM,
-                passes=("sleeve",),
-                friction=SMOOTH_TROUGH,
-                friction_combine="min",
-            )
-        )
-        shapes.append(
-            box(
-                (P.RAIL_T, rail_l, P.RAIL_W),
-                pos=(s * cx, rail_cy, cz),
-                quat=_quat(mk.axis_angle((0.0, 1.0, 0.0), s * P.RAIL_TILT_RAD)),
-                color=ALUMINUM,
-                passes=("sleeve",),
-                friction=SMOOTH_TROUGH,
-                friction_combine="min",
-            )
-        )
+        for span in P.LIP_SPANS_DEG:
+            shapes.append(_lip_plate(s, span, P.SHELF_YS[0], P.LIP_Y0, lean_in=P.LEAD_IN))
+            shapes.append(_lip_plate(s, span, P.LIP_Y0, P.SHELF_YS[-1]))
+            shapes.append(_lip_plate(s, span, P.SHELF_YS[0], P.LIP_Y0, lean_in=P.LEAD_IN, core=True))
+            shapes.append(_lip_plate(s, span, P.LIP_Y0, P.SHELF_YS[-1], core=True))
     for y_s in P.SHELF_YS:
-        shapes.append(
-            box(
-                (P.SHELF_W, P.SHELF_T, P.SHELF_H),
-                pos=(0.0, y_s, P.FLOOR_Z + P.SHELF_H / 2.0),
-                color=ALUMINUM_STEP,
-                friction=SMOOTH_TROUGH,
-                friction_combine="min",
-            )
-        )
+        shapes.append(box((P.SHELF_W, P.SHELF_T, P.SHELF_H), pos=(0.0, y_s, P.FLOOR_Z + P.SHELF_H / 2.0), color=ALUMINUM_STEP,
+                          friction=PVC_ON_METAL, friction_combine="min"))
     tab_cy = P.TAB_SHOULDER_Y + P.TAB_L / 2.0
     shapes += [
         box(
@@ -176,7 +154,7 @@ def build_vials(top: float) -> None:
         vy = foot_y - P.bay_centre_y(bay_idx)
         vz = cz + P.VIAL_REST_Z + 0.0003
         shapes = [
-            capsule(P.VIAL_R, P.VIAL_STRAIGHT_L, axis="y", color=MAGENTA, friction=SMOOTH_TROUGH, friction_combine="min"),
+            capsule(P.VIAL_R, P.VIAL_STRAIGHT_L, axis="y", color=MAGENTA, friction=PP_SLIDING, friction_combine="min"),
             cylinder(P.VIAL_R - 0.0001, 0.0110, pos=(0.0, P.VIAL_L / 2.0 - 0.0060, 0.0), axis="y", color=WHITE_CAP, solid=False),
         ]
         body(
@@ -205,11 +183,12 @@ def build_sleeve(top: float) -> None:
                 pos=(r_mid * math.sin(a), 0.0, r_mid * math.cos(a)),
                 quat=_quat(mk.axis_angle((0.0, 1.0, 0.0), a)),
                 color=FROSTED_IVORY,
-                friction=mk.GRIPPY,
+                friction=PVC_ON_METAL,
+                friction_combine="min",
             )
         )
     for end_s in (-1.0, 1.0):
-        for k in (0, 2, 4, 6):
+        for k in range(0, P.SLEEVE_STAVES, 4):
             a = k * (2.0 * math.pi / P.SLEEVE_STAVES)
             shapes.append(
                 box(
@@ -231,41 +210,12 @@ def build_sleeve(top: float) -> None:
     )
 
 
-def build_slide_mechanism(top: float) -> None:
-    """Coaxial carriage ``c_slv`` built at station CARRIAGE_BUILT_S = 15 mm along ``cane``: its 2 mm collider sits at
-    (0, -SLEEVE_L/2, 0) in ``c_slv``'s frame, which lies inside ``cane``'s hollow shaft at y_c = 15..265 mm for every
-    pose in 3D space (requiring zero set_joint or write_pose at reset or engagement)."""
-    cx, foot_y, cz = cane_start_pos(top)
-    # Cane built at yaw = pi (+y_c along world -y): sleeve centre when mouth is at y_c = CARRIAGE_BUILT_S
-    c_pos = (cx, foot_y + (0.5 * P.SLEEVE_L - P.CARRIAGE_BUILT_S), cz)
-    passes = ("cane", "vial_a", "vial_b", "sleeve", "prep_mat", "tray")
-    body(
-        "c_slv",
-        [box((0.002, 0.002, 0.002), pos=(0.0, -0.5 * P.SLEEVE_L, 0.0), color=ALUMINUM, passes=passes)],
-        pos=c_pos,
-        mass=0.002,
-        color=ALUMINUM,
-    )
-    slide(
-        "slv_s",
-        "c_slv",
-        "cane",
-        axis=(0.0, -1.0, 0.0),
-        limits=(-P.CARRIAGE_BUILT_S - 0.002, P.SLIDE_MAX - P.CARRIAGE_BUILT_S + 0.001),
-        spring=P.SLIDE_K,
-        rest=0.0,
-        damping=P.SLIDE_DAMP,
-    )
-    weld("w_sleeve", "sleeve", "c_slv", made=False)
-
-
 def build(top: float) -> None:
     build_prep_mat(top)
     build_tray(top)
     build_sleeve(top)
     build_cane(top)
     build_vials(top)
-    build_slide_mechanism(top)
 
 
 # --- hand-hull helpers used by task.py ------------------------------------------------------------------------------------

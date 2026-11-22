@@ -1,94 +1,97 @@
 # Thread a 273 mm CryoSleeve onto a vial-loaded aluminum CryoCane up to its top tab before transfer-racking
 
-Instruction given to the policy: `Slide the ivory cryo-sleeve from the prep mat onto the aluminum cryo-cane up to its bent top tab without spilling either vial, lay the sleeved cane flat inside the stainless transfer tray, and let go.`
+Instruction given to the policy: `Slide the ivory cryo-sleeve from the prep mat onto the aluminum cryo-cane up to its bent top tab without spilling either vial, lay the sleeved cane flat inside the stainless transfer tray, then let go and move both hands clear.`
 
-Files: `task.json`; `task.py` (rules, score); `scene.py` (bodies); `parts.py` (figures, sources); `checks.py`, `trials.py`, `demo.py` (reach, PhysX trials, reference run); `test_cryocane_sleeve.py`; the kit (`mechkit.py`, `demo_kit.py`, `kit_extra.py`); `start_top.png`, `start_top_policy.png` (320 x 176), `start_left_wrist.png`, `start_right_wrist.png`; `end_top.png`, `end_top_policy.png`.
+Files: `task.json`; `task.py` (rules, score); `scene.py` (bodies); `parts.py` (figures, sources); `checks.py`, `trials.py`, `demo.py`; `test_cryocane_sleeve.py`; kit (`mechkit.py`, `demo_kit.py`, `kit_extra.py`); `start_top.png`, `start_top_policy.png`, `start_left_wrist.png`, `start_right_wrist.png`; `end_top.png`, `end_top_policy.png`.
 
 ![the top camera's first picture](start_top.png)
 
 ## What the task tests
 
-- **Level 180-degree yaw with loose tubes.** Two 1.8 mL round-bottom Nunc CryoTubes (`377267`, 12.5 x 49.0 mm) sit loose by gravity in open C-bays of a 290 mm 5-place stepped Al Nalgene CryoCane (`5015-0001`), whose 26 mm top tab starts facing the sleeve across a 13 mm gap. Yawing 180 degrees level keeps both tubes seated; rolling > ~60 deg or tipping steeply before sleeving spills them (`0.0`).
-- **One-way coaxial 265 mm two-hand pass.** Pushing the 273 mm Nalgene CryoSleeve (`5016-0001`) onto the near end hits the 26 mm top tab at 0 mm. Only after the 180-degree yaw can both hands telescope the sleeve over the straight foot and drive a 265 mm pass against 5.0 N drag (35.0 N if cocked > 0.35 N m) to within 10 mm of the top tab, enclosing vials and foot.
-- **Shortcuts scored 0.** Putting an unsleeved or half-sleeved cane in the tray latches `0.0`; wrong-end entry stops at the 26 mm tab; rolling spills the vials (`0.0`).
-- **What stands in for what, and states set directly.** Rigid bodies in PhysX (`task.py`, `scene.py`, `demo.py` call zero `write_pose`, `set_joint` or `mk.push`; `trials.py` sets poses only for isolated rules). Because the path tracer draws fractional opacity opaque, the clear PVC sleeve is drawn opaque frosted ivory (`sRGB 0.92, 0.93, 0.88`). Its 8-stave bore is 21.6 mm flat-to-flat (23.6 mm outer) to clear the 13.2 mm stack; telescoped 10..60 mm coaxially over the foot (`<= 2.8 mm` mouth, `<= 2.0 deg`), `w_sleeve` joins in-place (zero snap) onto the 265 mm `slv_s` slide (`5.0 N` wipe, `35.0 N` if > `0.35 N m`), and direct geometric enclosure (`<= 6 mm`, `<= 5 deg`, `30..273 mm`) is also scored; solver masses 35 / 12 / 35 g (real 16 / 3.5 / 18 g); no PVC flex or slosh.
-- **Grasps and visibility (`320 x 176`).** Left hand pinches the 26 mm top tab (`<= 11.5 cm` up, `29.6 N`/finger); right hand pinches the 23.6 mm sleeve tail (`<= 10.4 cm`, `33.0 N`/finger); TCPs `>= 262 mm` apart (`hulls >= 32 mm`). At `320 x 176` (`start_top_policy.png`, `end_top_policy.png`), blue tab, magenta vials, ivory sleeve, blue mat and steel tray stand out.
+- **Level 180-degree yaw with loose tubes.** Two loose 1.8 mL Nunc CryoTubes (`377267`) lie in open bays of a 290 mm aluminum Nalgene CryoCane (`5015-0001`) whose 26 mm tab starts facing the sleeve; yawed 180 degrees level they stay, rolled past ~57 degrees or tipped steeply they spill (0).
+- **A snug sleeve kept straight for 265 mm.** The 273 mm Nalgene CryoSleeve (`5016-0001`, 14.5 mm outside per Heathrow's equivalent HS23210, 13.5 mm bore) passes the 13.2 mm cane-and-tube stack with 0.15 mm a side. No joint guides it: a free PVC tube in true contact with cane and tubes, kept on the cane's axis by one hand while the other holds the cane. Straight its only drag is weight x 0.38; cocked, its rim wedges and it stops.
+- **One way on.** The 26 mm tab stops a wrong-end sleeve at 0 mm; the sleeve goes on only from the foot, after the yaw.
+- **Shortcuts scored 0.** An unsleeved or half-sleeved cane in the tray latches 0.
+- **Grasps and visibility.** Left hand pinches the 26 mm tab (37.6 N a finger), right hand the 14.5 mm sleeve near its tail (33.0 N); blue tab, magenta vials, ivory sleeve, blue mat and steel tray stand out at 320 x 176.
 
 ## Scene
 
-- **Prep mat:** 130 x 600 x 2.0 mm blue silicone strip [hs-mat], taped at `(210, 0) mm` with white ticks.
-- **CryoCane (`cane`):** Thermo Scientific Nalgene 5-place stepped Al CryoCane (`5015-0001`, 290 mm) [cane], trough-up along `x = 210 mm` from `y = +278 mm` (foot) to `-12 mm` (26 mm blue-labelled top tab).
-- **Cryovials (`vial_a`, `vial_b`):** Thermo Scientific Nunc 1.8 mL round-bottom PP CryoTubes (`377267`, 12.5 x 49.0 mm) [vial], white caps to `-y`, sealed with 1.5 mL magenta water, loose in bays 3 and 2.
-- **CryoSleeve (`sleeve`):** Thermo Scientific Nalgene PVC CryoSleeve (`5016-0001`, 273 mm) [sleeve], along `x = 210 mm` from `y = -298` to `-25 mm` (mouth 13 mm from top tab).
-- **Transfer tray (`tray`):** our fixture, open 18/10 stainless tray 350 x 150 x 35 mm (any open tray >= 320 x 140 mm; cf. [bochem]), 420 g, at `(365, +35) mm`.
+- **Prep mat:** 130 x 600 x 2.0 mm blue silicone strip [hs-mat], taped at (210, 0) mm with white ticks.
+- **CryoCane (`cane`):** Thermo Scientific Nalgene stepped aluminum CryoCane (`5015-0001`, 290 mm) [cane], trough-up along x = 210 mm from y = +278 mm (foot) to -12 mm (blue-labelled tab). Its trough (2.3 mm strip, 0.5 mm clip arms to a 2.8 mm lip, 4 mm steps, a 2 mm lead-in at the foot) lies inside the sleeve's 13.5 mm bore.
+- **Cryovials (`vial_a`, `vial_b`):** Thermo Scientific Nunc 1.8 mL round-bottom PP CryoTubes (`377267`) [vial], white caps toward -y, sealed with 1.5 mL magenta water, loose in bays 3 and 2.
+- **CryoSleeve (`sleeve`):** Thermo Scientific Nalgene PVC CryoSleeve (`5016-0001`, 273 mm) [sleeve], which Thermo says fits this cane [brochure]; along x = 210 mm from y = -298 to -25 mm (mouth 13 mm from the tab).
+- **Transfer tray (`tray`):** our fixture, open 18/10 stainless tray 350 x 150 x 35 mm (any open tray >= 320 x 140 mm; cf. [bochem]), 420 g, at (365, +35) mm.
 
 ## Rules and score
 
-- **0 for good** (from the video on a bench, end photo confirming) if either vial leaves its bay (`> 14 mm` off bore axis, `> 15 mm` off bay centre, or touching mat/tray/bench), cane or vial enters inside the tray (below its 35 mm rim) before the sleeve seats to the top tab, or any object drops off the bench.
-- **0.25:** sleeve coaxially enclosing cane from the foot (`w_sleeve` or `<= 6 mm, <= 5 deg, 30..273 mm`) with leading mouth `>= 120 mm` onto the cane, vials retained.
-- **0.5:** sleeve leading mouth `<= 10 mm` from the 90-degree top tab shoulder (`>= 258 mm` travel) and bottom foot wholly inside the 273 mm sleeve (`0 mm` bare), vials retained.
-- **1.0:** `0.5` met, sleeved cane flat in tray (`344 x 144 mm` walls below 35 mm rim, tilt `<= 8 deg`), both hands' hulls `>= 30 mm` clear, held so for `1.0 s` (`20 steps`) with cane and sleeve moving `3 mm` at most. Limit `1,800 steps` (`90 s`); `SUCCESS_HOLD_S = 3.5 s`.
+- **0 for good** (from the video on a bench, end photo confirming) if either vial leaves its bay (centre > 14 mm off the cane's axis or > 15 mm off its bay centre, or touching mat, tray or bench), the cane or a vial enters inside the tray (below its 35 mm rim) before the sleeve is seated to the tab, or any object drops off the bench.
+- **On the cane:** the sleeve's axis within 2 mm and 2 degrees of the middle line of the cane-and-vial stack, the sleeve reaching from behind the foot onto it.
+- **0.25:** on the cane with its leading mouth >= 120 mm from the foot, vials retained.
+- **0.5:** mouth <= 10 mm from the tab's shoulder (>= 258 mm on) and the foot wholly inside the sleeve, vials retained.
+- **1.0:** 0.5 met, the sleeved cane flat in the tray (inside its 344 x 144 mm walls below the 35 mm rim, tilt <= 8 degrees), both hands >= 30 mm clear, held so 1.0 s (20 steps) with cane and sleeve moving 3 mm at most. Limit 1,800 steps (90 s).
 
 ## Key figures and their sources
 
 | Figure | Value | Source |
 |---|---|---|
-| CryoCane (`5015-0001`) | 290 mm (`29 cm`), Al, 5-place | maker: `'5015-0001 ... Aluminium ... Unterteilt ... 29 cm (11,31 in.)'` [cane]; listing: 5-place |
-| Cryovial (`377267`) | 1.8 mL, 12.5 x 49.0 mm, round PP | maker: `'377267 ... 1.8 ml ... 12.5 mm ... 49 mm ... Polypropylen ... Rund'` [vial] |
-| CryoSleeve (`5016-0001` / `HS23210`) | 273 mm PVC (`14.5 x 275 mm`) | maker: `'5016-0001 ... Nalgene CryoSleeve, 273 mm, PVC'` [sleeve]; `'14.5 mm diameter x 275 mm length'` [hs-slv] |
-| Silicone mat | 350 x 600 x 2.0 mm | maker: `'14 x 23.5 x 0.1 in (35 x 60 x 0.2 cm)'` [hs-mat] |
-| Transfer tray | 350 x 150 x 35 mm, 420 g | our fixture: generic open tray >= 320 x 140 mm (cf. [bochem]); mass estimate (0.6 mm steel) |
-| Pitch, tab stop, tab width | 51.3, 268, 26.0 mm | estimate: scaled from `5015-0001` photo vs 290 mm; 26 mm tab blocks 21.6 mm bore |
-| Spine, rail lip, step | 0.7, 2.8, 2.2 mm | estimate: 13.2 mm stack; capsule roll/pitch spill at ~57/50 deg |
-| Bore, wipe & cocked bind | 21.6 mm flat; 5.0 N, 35.0 N (>0.35 N m) | estimate: clears 13.2 mm stack; PVC wipe over Al rails, 7x cocked wedge |
-| Real masses | 16 g, 3.5 g, 18 g | estimate: 0.7 mm Al, 2 g PP + 1.5 mL water, 0.45 mm PVC |
+| CryoCane (`5015-0001`) | 290 mm, aluminum, stepped | maker: '5015-0001 \| stepped \| 290 / 11.3125' [brochure]; 5-place: listing [cp] |
+| Cryovial (`377267`) | 1.8 mL, 12.5 x 49 mm | maker: 'Diameter (Metric) 12.5 mm', 'Length (Metric) 49 mm' [vial] |
+| CryoSleeve (`5016-0001`) | 273 mm PVC, fits the cane | maker: 'Nalgene CryoSleeve, 273 mm, PVC' [sleeve]; '5016-0001 will fit over the above 3 canes' [brochure] |
+| Sleeve outside | 14.5 mm | maker: 'Dimensions: 14.5 mm diameter x 275 mm length' [hs-slv] (inner or outer not stated: taken as outside, the tighter fit) |
+| Sleeve wall; bore | 0.5 mm; 13.5 mm | estimate: under the 0.65 mm that lets a 14.5 mm tube pass the 13.2 mm stack, over a film that would not stay round |
+| Stack | 0.7 + 12.5 = 13.2 mm | estimate: 0.7 mm aluminum strip under the maker's 12.5 mm tube |
+| Strip, clip arms, lip, step | 2.3, 0.5, 2.8, 2.2 mm | estimate: the widest strip and thickest arms that stay inside the 13.5 mm bore; spill at ~57 / 50 deg |
+| Friction, PVC on aluminum | 0.53 static, 0.38 sliding | listing: 'Steel \| PVC \| 0.53 \| 0.38' [mg] (aluminum taken alike) |
+| Friction, PP vials | 0.30, 0.25 | estimate: PP slides more easily than PVC on metal |
+| Pitch, tab stop, tab | 51.3, 268, 26 mm | estimate: scaled from the `5015-0001` photo against 290 mm |
+| Silicone mat | 350 x 600 x 2.0 mm | maker: '14 x 23.5 x 0.1 in (35 x 60 x 0.2 cm)' [hs-mat] |
+| Transfer tray | 350 x 150 x 35 mm, 420 g | our fixture (cf. [bochem]); mass estimate (0.6 mm steel) |
 
-`parts.FIGURES`: 8 maker, 1 listing, 9 our fixture, 15 estimate.
+`parts.FIGURES`: 8 maker, 2 listing, 9 our fixture, 15 estimate.
 
 ## First minutes of a real trial
 
-On bought `5015-0001`, `5016-0001`, `377267`, mat and tray (~5 min; a different reading replaces the estimate): caliper top tab width, bay pitch, lip height and sleeve bore (1.5 min); weigh items on a scale (1 min); roll/tilt an unsleeved cane with two `377267` vials against a phone inclinometer for spill angles (1 min); pull a seated sleeve off with a luggage scale for wipe force and tab gap (1.5 min).
+On the bought `5015-0001`, `5016-0001`, `377267`, mat and tray (~6 min): caliper the sleeve's outside and wall (its bore), the cane's strip, arms, lip, tab and bay pitch, and the strip-plus-tube stack (2 min); weigh the parts (1 min); roll and tilt the loaded cane against a phone inclinometer for the spill angles (1 min); holding the cane by its tab, pull the sleeve along it with a luggage scale, straight and then cocked 10 degrees (2 min). A different reading replaces the estimate.
 
 ## Forces
 
 | Force or stop | How made (`scene.py`) | Acts on | Reaction on | Ends / triggers |
 |---|---|---|---|---|
-| Open C-trough seating | Gravity + 2.8 mm rails, 2.2 mm steps | `vial_a`, `vial_b` | `cane` (equal & opposite) | Spills if unsleeved cane rolls > ~60 deg or pitches steeply |
-| Top-tab one-way stop | Rigid 26.0 mm Al tab vs 21.6 mm bore | `sleeve` mouth | `cane` tab (equal & opposite) | Blocks wrong-end entry at 0 mm; needs 180 deg yaw |
-| Coaxial wipe & bind | `slide("slv_s")` capped spring | `sleeve` | `cane` (equal & opposite) | 5.0 N drag over 265 mm (35 N if > 0.35 N m); unmates on > 5 N pull to 0 mm |
+| C-trough seating | gravity, 2.8 mm lip, 2.2 mm steps | `vial_a`, `vial_b` | `cane` | spills past ~57 deg roll or steep pitch |
+| Top-tab stop | rigid 26 mm tab against the 14.5 mm sleeve | `sleeve` mouth | `cane` tab | wrong-end entry stops at 0 mm |
+| Sleeve on the cane | true contact of 16 PVC staves (13.5 mm bore) with strip, arms, steps and tubes; friction 0.53 / 0.38 on aluminum, 0.30 / 0.25 on PP: straight, weight x 0.38 (~0.1 N solver, ~0.03 N real); cocked, the rim wedges | `sleeve` | `cane`, vials | slides pushed straight; a cocked push stops |
 
 ## Checks run so far
 
-- Tests (`test_cryocane_sleeve.py`): 7 pass (zero `write_pose`/`set_joint`/`mk.push` in `task.py`, `scene.py`, `demo.py`).
-- Reach (`checks.py`, `gcryo_g1`): 15 poses (`IK <= 0.09 mm`, margin `>= 9.7 deg`, hulls `>= 32.1 mm` apart, TCPs `>= 262.2 mm`); 2 s idle `0.0`.
-- Trials (`trials.py`, `gcryo_g2f` + `gcryo_g2j`): 6/6 pass — wrong-end `-5.3 mm` (`0.0`), 75-deg roll spills vials (`0.0`), unsleeved in tray (`0.0`), 150 mm (`0.25`), 265.5 mm inverted `165 deg` (`0.5`), 1.74-deg angled slide (`0.25` -> `0.5`).
-- Demo (`demo.py`, `gcryo_rec1`): `1.0` in `33.05 s` (`0.25` at `16.95 s`, `0.5` at `19.20 s`, `1.0` at `29.60 s`; `264.7 mm` slide vs `5.0 N` wipe, `4.1 mm` tab gap, roll/pitch `<= 2.2/1.5 deg`, `29.6/33.0 N` pinch, arms clear `218.9 mm`).
+- Tests: 9 pass (the cane fits inside the 13.5 mm bore, no joint, the on-cane and wall readings, zero rules, levels; no `write_pose`, `set_joint` or `mk.push` in `task.py`, `scene.py`, `demo.py`).
+- Reach (`checks.py`, gcrA): 15 poses (IK <= 0.073 mm, joints >= 9.7 deg inside limits, <= 13.3 cm up, hulls >= 33 mm apart); 2 s idle 0.
+- Trials (gcr9): the two-hand push held straight slides to 266.5 mm (0.5; peak contact 1.2 N, normal force while steering the rim); with the sleeve 12 or 3 degrees off the cane it stops at 2.7 / 3.3 mm (0); wrong end stops at the tab (0); 75-degree roll spills (0); unsleeved in tray (0); threaded 150 mm (0.25); seated on its side (0.5). No cane point went over 0.16 mm into the sleeve wall; with thin plates alone (gcr7) a cocked sleeve went through them at ~40 N, hence 2.5 mm solver cores behind strip and arms.
+- Demo (gcrB = recording gcrR): 1.0 at 41.95 s, done at 45.4 s (908 steps; 0.25 at 26.6 s, 0.5 at 31.85 s); seated 3.3 mm from the tab; peak sleeve contact 0.97 N; cane roll / pitch <= 2.1 / 1.9 deg.
 
 ![the reference run's last picture](end_top.png)
 
 ## How it differs
 
-Other tasks hang a canister hook in a Dewar neck, drop a short ring in a bench block, or shrink a collar onto a clamped wire. Here nothing is fixed: the robot lifts an untethered 290 mm open-trough cane holding two loose tubes, yaws 180 degrees level in mid-air without spilling them, and drives a 265 mm (`19:1`) two-hand coaxial pass to the top tab before racking.
+Other tasks hang a canister hook in a Dewar neck or drop a ring in a bench block. Here nothing is fixed: the robot turns a loaded open cane 180 degrees level in mid-air and keeps a snug 273 mm sleeve straight on it for a 265 mm two-hand pass.
 
 ## Assets and sources
 
 No third-party meshes, scans, textures or sounds; only `mechkit.py` primitives.
-- [cane] https://www.thermofisher.com/order/catalog/product/5015-0001
-- [sleeve] https://www.thermofisher.com/order/catalog/product/5016-0001
-- [vial] https://www.thermofisher.com/order/catalog/product/377267
-- [hs-slv] https://www.heathrowscientific.com/pvc-cryogenic-cane-sleeves/
-- [hs-mat] https://www.heathrowscientific.com/silicone-lab-mats/
+- [cane] https://www.thermofisher.com/order/catalog/product/5015-0001 ; [sleeve] https://www.thermofisher.com/order/catalog/product/5016-0001 ; [vial] https://www.thermofisher.com/order/catalog/product/377267
+- [brochure] https://assets.thermofisher.com/TFS-Assets/LED/brochures/Cryopreservation-Brochure-EN.pdf (p. 11, p. 16)
+- [hs-slv] https://www.heathrowscientific.com/pvc-cryogenic-cane-sleeves/ ; [hs-mat] https://www.heathrowscientific.com/silicone-lab-mats/
+- [cp] https://www.cplabsafety.com/nalgene-5015-0001-cryocane-stepped-aluminum-5-place-case-48/ng-5015-0001 ; [mg] https://mechguru.com/machine-design/typical-coefficient-of-friction-values-for-common-materials/
 - [bochem] https://bochem.de/produkt/instrumentenablage-18-10-stahl/
 
 ## How to run
 
-Tests: `scripts/rta check cryocane_sleeve`. Reach/start: `scripts/rta simpy <id> mech/tasks/cryocane_sleeve/checks.py --frame0 /workspace/robocurve/outputs/<id>`. Trials: `scripts/rta simpy <id> mech/tasks/cryocane_sleeve/trials.py /workspace/robocurve/outputs/<id>`. Demo: `scripts/rta demo <id> mech/tasks/cryocane_sleeve` (`--no-video`, `--quick`).
+Tests: `scripts/rta check cryocane_sleeve`. Reach/start: `scripts/rta simpy <id> mech/tasks/cryocane_sleeve/checks.py --frame0 /workspace/robocurve/outputs/<id>`. Trials: `scripts/rta simpy <id> mech/tasks/cryocane_sleeve/trials.py /workspace/robocurve/outputs/<id>`. Demo: `scripts/rta demo <id> mech/tasks/cryocane_sleeve`.
 
-A trial lasts at most 90 s (1,800 steps at 20 Hz); the reference run takes ~36 s. Fixed layout, nothing drawn from the seed: `--seed 0` under the harness gives trial seed 1415158438 and the same start.
+A trial lasts at most 90 s (1,800 steps at 20 Hz). Fixed layout, nothing drawn from the seed.
 
 ```bash
 inspect-robots run --embodiment yam_arena --policy dream \
   -E task=mech/tasks/cryocane_sleeve/task.py -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
-  --instruction "Slide the ivory cryo-sleeve from the prep mat onto the aluminum cryo-cane up to its bent top tab without spilling either vial, lay the sleeved cane flat inside the stainless transfer tray, and let go." \
+  --instruction "Slide the ivory cryo-sleeve from the prep mat onto the aluminum cryo-cane up to its bent top tab without spilling either vial, lay the sleeved cane flat inside the stainless transfer tray, then let go and move both hands clear." \
   --scorer task_score --max-steps 1800 --seed 0 --no-prompt --store-frames --log-dir <log dir>
 ```

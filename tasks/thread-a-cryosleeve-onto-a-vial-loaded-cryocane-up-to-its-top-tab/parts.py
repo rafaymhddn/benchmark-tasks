@@ -25,6 +25,10 @@ URL_VIAL = "https://www.thermofisher.com/order/catalog/product/377267"
 URL_HS_SLEEVE = "https://www.heathrowscientific.com/pvc-cryogenic-cane-sleeves/"
 URL_HS_MAT = "https://www.heathrowscientific.com/silicone-lab-mats/"
 URL_BOCHEM = "https://bochem.de/produkt/instrumentenablage-18-10-stahl/"
+URL_BROCHURE = "https://assets.thermofisher.com/TFS-Assets/LED/brochures/Cryopreservation-Brochure-EN.pdf"
+URL_MECHGURU = "https://mechguru.com/machine-design/typical-coefficient-of-friction-values-for-common-materials/"
+URL_CALPAC = "https://www.cplabsafety.com/nalgene-5015-0001-cryocane-stepped-aluminum-5-place-case-48/ng-5015-0001"
+URL_CAP_FAQ = "https://www.thermofisher.com/order/catalog/product/347597/faqs"
 
 FIGURES: dict[str, tuple[float, str, str, str]] = {}
 
@@ -42,7 +46,7 @@ CANE_L = figure(
     0.290,
     "m",
     MAKER,
-    f"maker's page: '5015-0001 ... Aluminium ... Unterteilt ... 29 cm (11,31 in.)' ({URL_CANE})",
+    f"maker's brochure: '5015-0001 | stepped | 290 / 11.3125' ({URL_BROCHURE}, p. 11); page: 'Aluminum' ({URL_CANE})",
 )
 N_BAYS = int(
     figure(
@@ -50,7 +54,7 @@ N_BAYS = int(
         5.0,
         "-",
         LISTING,
-        "5-place stepped design for 5 cryogenic tubes (5015-0001 product specification)",
+        f"listing: 'Nalgene CryoCane Stepped, Aluminum, 5-Place, case/48' ({URL_CALPAC})",
     )
 )
 CANE_MASS_REAL = figure(
@@ -69,21 +73,30 @@ SPINE_T = figure(
     ESTIMATE,
     "0.7 mm stamped aluminum sheet so 0.7 mm spine plus 12.5 mm vial is a 13.2 mm stack",
 )
-SPINE_W = 0.0080  # m: flat bottom spine width along x_c
-FLOOR_Z = -0.0051  # m: top surface of spine floor in cane frame (+0.8 mm minimax centering inside sleeve bore)
+SPINE_W = figure(
+    "CryoCane flat bottom strip width",
+    0.0023,
+    "m",
+    ESTIMATE,
+    "the widest flat 0.7 mm strip under a 12.5 mm vial that stays inside the sleeve's 13.5 mm bore (corner 6.70 mm from its axis)",
+)
+FLOOR_Z = -0.0051  # m: top surface of the spine floor in the cane frame
 BASE_Z = FLOOR_Z - SPINE_T  # -0.0058 m: underside of cane resting on mat or tray
 
-RAIL_INNER_HALF_X = 0.00655  # m: 13.1 mm inner width across C-rail lips (0.6 mm play around 12.5 mm vial)
 RAIL_H = figure(
-    "CryoCane side C-rail lip height above floor",
+    "CryoCane clip-arm lip height above floor",
     0.0028,
     "m",
     ESTIMATE,
-    "shallow open C-channel lip h = 2.8 mm: retains 12.5 mm round vial level, spills past ~57 deg roll (acos((R-h)/R))",
+    "open C-channel lip h = 2.8 mm: retains a 12.5 mm round vial level, spills past ~57 deg roll (acos((R-h)/R))",
 )
-RAIL_T = 0.0008  # m: side rail thickness
-RAIL_W = 0.0036  # m: side rail slant width
-RAIL_TILT_RAD = math.radians(38.0)
+LIP_T = figure(
+    "CryoCane clip-arm thickness",
+    0.0005,
+    "m",
+    ESTIMATE,
+    "0.5 mm arms hugging the vial up to the 2.8 mm lip stay inside the 13.5 mm sleeve bore (0.7 mm arms would touch it past ~25 deg)",
+)
 
 BAY_PITCH = figure(
     "CryoCane stepped bay pitch",
@@ -93,7 +106,7 @@ BAY_PITCH = figure(
     "scaled from 5015-0001 photo against 290 mm length: 5 bays over 257 mm leaving 49.9 mm clear per 49.0 mm vial",
 )
 SHELF_T = 0.0014  # m: axial thickness of each stamped stepped shelf stop
-SHELF_W = 0.0076  # m: transverse width of each stepped shelf stop
+SHELF_W = 0.0040  # m: transverse width of each stepped shelf stop (inside the trough, so inside the bore)
 SHELF_H = figure(
     "CryoCane stepped shelf stop height",
     0.0022,
@@ -115,7 +128,7 @@ TAB_W = figure(
     0.026,
     "m",
     ESTIMATE,
-    "26 mm wide upturned end tab (> 21.6 mm sleeve bore and 23.6 mm outer tube) so wrong-end sleeve entry stops at 0 mm",
+    "26 mm wide upturned end tab (wider than the 14.5 mm sleeve) so a wrong-end sleeve stops at 0 mm",
 )
 TAB_L = CANE_L - TAB_SHOULDER_Y  # 0.022 m: axial length of top handling tab (268..290 mm)
 TAB_TOP_Z = 0.0182  # m: top of upturned ID handling tab (+24.0 mm above cane underside BASE_Z)
@@ -133,7 +146,8 @@ VIAL_OD = figure(
     0.0125,
     "m",
     MAKER,
-    f"maker's page: '12.5 mm (0.492 in.)' outer diameter ({URL_VIAL}); sits loose in 5015-0001 trough until sleeved",
+    f"maker's page: 'Diameter (Metric) 12.5 mm' ({URL_VIAL}); maker's FAQ on internal-thread tubes: 'the cap is the same "
+    f"diameter as the vial itself' ({URL_CAP_FAQ})",
 )
 VIAL_R = VIAL_OD / 2.0  # 0.00625 m
 VIAL_L = figure(
@@ -141,7 +155,7 @@ VIAL_L = figure(
     0.049,
     "m",
     MAKER,
-    f"maker's page: '49 mm (1.929 Zoll)' height ({URL_VIAL})",
+    f"maker's page: 'Length (Metric) 49 mm' ({URL_VIAL})",
 )
 VIAL_STRAIGHT_L = VIAL_L - 2.0 * VIAL_R  # 0.0365 m
 VIAL_MASS_REAL = figure(
@@ -154,6 +168,18 @@ VIAL_MASS_REAL = figure(
 VIAL_MASS = 0.012  # kg: PhysX solver mass declared in fidelity
 VIAL_REST_Z = FLOOR_Z + VIAL_R  # +0.00115 m in cane frame: top at +7.40 mm (total spine+vial stack = 13.20 mm)
 VIAL_BAYS = (2, 1)  # vial_a in bay index 2 (3rd from foot), vial_b in bay index 1 (2nd from foot)
+STACK = (VIAL_REST_Z + VIAL_R) - BASE_Z  # 0.0132 m: spine plus vial, the size the sleeve's bore must pass
+BORE_Z = 0.5 * ((VIAL_REST_Z + VIAL_R) + BASE_Z)  # +0.0008 m: the stack's middle, the threaded sleeve's axis in the cane frame
+LIP_FROM_DEG = math.degrees(math.asin(0.5 * SPINE_W / VIAL_R))  # 10.6 deg: the arms start where the flat strip ends
+LIP_TO_DEG = math.degrees(math.acos((VIAL_R - RAIL_H) / VIAL_R))  # 56.5 deg: the 2.8 mm lip
+LIP_SPANS_DEG = (
+    (LIP_FROM_DEG, 0.5 * (LIP_FROM_DEG + LIP_TO_DEG)),
+    (0.5 * (LIP_FROM_DEG + LIP_TO_DEG), LIP_TO_DEG),
+)  # each side: two flat arm plates tangent to the vial, angles from straight down
+LIP_Y0 = 0.018  # m: the arms run from here to the last shelf; a 14 mm lead-in in front of them leans in by LEAD_IN
+LEAD_IN = 0.002  # m: the lead-in's front end sits 2 mm nearer the vial's axis (an 8 deg taper that steers the sleeve's rim)
+CORE_T = 0.0025  # m: solver core behind the strip, the clip arms and the nose (same outer face, built inward, passing the
+#                  vials): thin plates alone let a cocked sleeve's 0.5 mm wall through them under ~40 N (trial gcr7)
 
 
 def bay_centre_y(bay_idx: int) -> float:
@@ -166,35 +192,37 @@ SLEEVE_L = figure(
     0.273,
     "m",
     MAKER,
-    f"maker's page: '5016-0001 ... Nalgene CryoSleeve, 273 mm, PVC' ({URL_SLEEVE})",
+    f"maker's page: '5016-0001 ... Nalgene CryoSleeve, 273 mm, PVC' ({URL_SLEEVE}); maker's brochure: 'Nalgene CryoSleeve Cat. No. "
+    f"5016-0001 will fit over the above 3 canes' (5015-0001 among them, {URL_BROCHURE})",
 )
-SLEEVE_CATALOG_ID = figure(
-    "Companion PVC cane sleeve diameter (Heathrow HS23210)",
+SLEEVE_OD = figure(
+    "PVC cane sleeve outer diameter (Heathrow HS23210)",
     0.0145,
     "m",
     MAKER,
-    f"maker's page: 'HS23210 ... Dimensions: 14.5 mm diameter x 275 mm length' ({URL_HS_SLEEVE})",
+    f"maker's page: 'HS23210 ... Dimensions: 14.5 mm diameter x 275 mm length' ({URL_HS_SLEEVE}); inner or outer is not "
+    "stated: taken as the outside, the tighter fit",
 )
-SLEEVE_STAVES = 8
-SLEEVE_IN_FLAT = figure(
-    "Simulated 8-stave sleeve bore, flat-to-flat",
-    0.0216,
+SLEEVE_WALL = figure(
+    "CryoSleeve PVC wall",
+    0.0005,
     "m",
     ESTIMATE,
-    "widened from ~15 mm thin-wall PVC to 21.6 mm flat-to-flat (23.4 mm corner-to-corner) so 8 rigid staves clear the 13.2 mm stack over 265 mm without pose snaps",
+    "0.5 mm: under the 0.65 mm most that lets a 14.5 mm tube pass the 13.2 mm stack, over a 0.4 mm film that would not stay round",
 )
-SLEEVE_WALL = 0.0010  # m: stave thickness
-SLEEVE_R_IN = SLEEVE_IN_FLAT / 2.0  # 0.0102 m apothem to inner flat (>= 2.6 mm radial clearance over cane & vials)
-SLEEVE_R_OUT = SLEEVE_R_IN + SLEEVE_WALL  # 0.0112 m apothem to outer flat (22.4 mm outer flat-to-flat)
+SLEEVE_BORE = SLEEVE_OD - 2.0 * SLEEVE_WALL  # 0.0135 m: 0.3 mm over the 13.2 mm stack (0.15 mm a side when centred)
+SLEEVE_STAVES = 16  # flat staves of a 16-sided tube (inside flats = the 13.5 mm bore, outside flats = 14.5 mm)
+SLEEVE_R_IN = 0.5 * SLEEVE_BORE  # 0.00675 m: axis to the inside flats
+SLEEVE_R_OUT = 0.5 * SLEEVE_OD  # 0.00725 m: axis to the outside flats
 SLEEVE_MASS_REAL = figure(
     "CryoSleeve PVC mass, real",
-    0.018,
+    0.0083,
     "kg",
     ESTIMATE,
-    "273 mm extruded clear PVC sleeve (~0.45 mm wall, 1,380 kg/m3)",
+    "273 mm of 14.5 mm PVC tube with a 0.5 mm wall (6.0 cm3 x 1,380 kg/m3)",
 )
 SLEEVE_MASS = 0.035  # kg: PhysX solver mass declared in fidelity
-CONTACT_OFF = 0.0008  # m: collider contact offset on cane, vials and sleeve (rest offset 0)
+CONTACT_OFF = 0.0005  # m: collider contact offset on cane, vials and sleeve (rest offset 0)
 
 # --- 4. Bench fixtures: silicone prep mat & 18/10 stainless transfer tray --------------------------------------------
 MAT_CX = figure("Prep mat centre x", 0.210, "m", FIXTURE, "21.0 cm forward of the arm bases, in both arms' 1 mm reach zone")
@@ -259,45 +287,33 @@ SLEEVE_START_CY = figure(
     "273 mm sleeve spans y = -298.0 to -25.0 mm on the prep mat, mouth 13 mm from the cane's bent top tab",
 )
 
-# --- 6. Zero-snap coaxial slide (engages right where sleeve stands at s_mouth = 10..60 mm, <= 2.0 deg) & wipe / bind -
-CARRIAGE_BUILT_S = 0.015  # m: built station of c_slv mouth along cane (limits -15..+251 mm -> mouth 0..266 mm)
-ENTRY_S_MIN, ENTRY_S_MAX = 0.010, 0.060  # m: sleeve mouth telescoped 10..60 mm over straight foot in pure PhysX
-ENTRY_RADIAL_MAX = 0.0028  # m: mouth radial offset <= 2.8 mm at engagement
-ENTRY_CENTRE_RADIAL_MAX = 0.0060  # m: sleeve-centre radial offset <= 6.0 mm (accommodates 2.0 deg over 136.5 mm)
-ENTRY_ANGLE_DEG = 2.0  # deg: coaxial within 2.0 deg when w_sleeve engages in-place (zero pose snap!)
-GEOM_RADIAL_MAX = 0.0060  # m: geometric coaxial enclosure radial limit alongside sleeve_mated()
-GEOM_ANGLE_DEG = 5.0  # deg: geometric coaxial enclosure angle limit alongside sleeve_mated()
-GEOM_SLIDE_MIN, GEOM_SLIDE_MAX = 0.030, SLEEVE_L  # m: leading sleeve mouth 30..273 mm along cane from straight foot
+# --- 6. The fit: true contact, no joint. The sleeve slides on whatever presses it: its own weight when straight, ----
+#        the two rim contacts' wedge when cocked; PhysX takes the friction from these coefficients ------------------
+MU_PVC = figure(
+    "PVC sleeve on the aluminium cane, dry friction (static, sliding)",
+    0.53,
+    "-",
+    LISTING,
+    f"'Steel | PVC | 0.53 | 0.38' (static, sliding; {URL_MECHGURU}), the nearest published pair, aluminium taken alike",
+)
+MU_PVC_DYN = 0.38
+MU_PP = figure(
+    "PP vial on the aluminium cane and on the PVC sleeve (static, dynamic)",
+    0.30,
+    "-",
+    ESTIMATE,
+    "polypropylene slides more easily than PVC on dry metal: 0.3 static, 0.25 sliding",
+)
+MU_PP_DYN = 0.25
 SLIDE_MAX = figure(
-    "CryoSleeve coaxial stroke to top tab stop",
+    "CryoSleeve stroke to the top tab",
     0.265,
     "m",
     ESTIMATE,
-    "268 mm shaft to bent tab minus 3 mm clearance = 265 mm stroke (encloses foot 8 mm inside 273 mm sleeve)",
+    "268 mm shaft to the bent tab minus 3 mm = 265 mm (the foot then 8 mm inside the 273 mm sleeve)",
 )
-SLIDE_N = figure(
-    "CryoSleeve coaxial sliding resistance",
-    5.0,
-    "N",
-    ESTIMATE,
-    "sliding friction of PVC sleeve wiping over aluminum cane and 1.8 mL tubes",
-)
-BIND_TORQUE_NM = figure(
-    "Off-axis cocking moment threshold for tube binding",
-    0.35,
-    "N m",
-    ESTIMATE,
-    "transverse bending moment on 19:1 sleeve (~3.5 deg off-axis push) that wedges tube on cane",
-)
-BIND_N = figure(
-    "Cocked sleeve binding resistance",
-    35.0,
-    "N",
-    ESTIMATE,
-    "7x wedge friction when 273 mm tube is pushed off-axis (> 0.35 N m bending moment)",
-)
-SLIDE_K = 15000.0  # N/m: stiff rest-following spring (0.33 mm give at 5 N) on PrismaticJoint slv_s
-SLIDE_DAMP = 45.0  # N s/m
+COAX_RADIAL_MAX = 0.002  # m: the sleeve's axis within 2 mm of the stack's middle line: it is on the cane, not beside it
+COAX_ANGLE_DEG = 2.0  # deg: and within 2 deg of the cane's axis (threaded, it cannot be more than 1.7 deg off at 10 mm)
 
 # --- 7. Scoring thresholds (identical in task.py, task.json and README.md) -------------------------------------------
 SPILL_RADIAL_MAX = 0.014  # m: vial centre > 14 mm off cane bore axis -> spilled off cane (zero rule)

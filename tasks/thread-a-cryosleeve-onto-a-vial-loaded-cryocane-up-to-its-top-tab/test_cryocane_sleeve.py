@@ -1,5 +1,5 @@
-"""Pure unit tests of the CryoCane sleeving task's scene, figures, zero-snap coaxial slide mechanics, and scoring rules.
-Every state is set directly without starting Isaac Sim."""
+"""Pure unit tests of the CryoCane sleeving task's scene, figures, the fit of the cane inside the sleeve, the geometric
+reading of a threaded sleeve, and the scoring rules. Every state is set directly without starting Isaac Sim."""
 
 from __future__ import annotations
 
@@ -54,23 +54,20 @@ def vials_in_bays(m, cane_pr, radial_off: float = 0.0, axial_off: float = 0.0) -
     return out
 
 
-def mated_state(m, cane_pr, slide_m: float, tray_pr=None, hands=FAR, contacts=None, velocities=None) -> None:
+def threaded_state(m, cane_pr, slide_m: float, tray_pr=None, hands=FAR, cock_deg: float = 0.0, offset=(0.0, 0.0, 0.0)) -> None:
+    """Cane and vials at ``cane_pr``; the sleeve on the stack's middle line (turned ``cock_deg`` about the vertical at
+    the middle of the overlap, shifted ``offset`` in the cane frame) with its mouth ``slide_m`` from the foot."""
     p_c, r_c = cane_pr
     u_c = r_c[:, 1]
-    j_val = slide_m - m.P.CARRIAGE_BUILT_S
-    slv_pos = p_c + (slide_m - 0.5 * m.P.SLEEVE_L) * u_c
-    c_pos, c_rot = m.mk.joint_pose(m.mk.MECH.joints["slv_s"], j_val, cane_pr)
-    poses = {"cane": cane_pr, **vials_in_bays(m, cane_pr), "c_slv": (c_pos, c_rot), "sleeve": (slv_pos, r_c)}
+    axis = p_c + m.P.BORE_Z * r_c[:, 2] + r_c @ np.asarray(offset, dtype=float)
+    turn = m.mk.axis_angle((0.0, 0.0, 1.0), math.radians(cock_deg))
+    pivot = axis + 0.5 * slide_m * u_c
+    slv_rot = turn @ r_c
+    slv_pos = pivot + slv_rot @ np.array([0.0, 0.5 * slide_m - 0.5 * m.P.SLEEVE_L, 0.0])
+    poses = {"cane": cane_pr, **vials_in_bays(m, cane_pr), "sleeve": (slv_pos, slv_rot)}
     if tray_pr is not None:
         poses["tray"] = tray_pr
-    m.mk.mend_all()
-    m.mk.set_state(poses=poses, joints={"slv_s": j_val}, contacts=contacts or {}, velocities=velocities or {})
-    m.mk.MECH.poses["c_slv"] = (c_pos, c_rot)
-    m.mk.MECH.poses["sleeve"] = (slv_pos, r_c)
-    m.mk.MECH.travel["slv_s"] = float(j_val)
-    m.mk.make("w_sleeve")
-    m.STATE["slv_rest"] = float(j_val)
-    m.STATE["max_slide_m"] = max(m.STATE.get("max_slide_m", 0.0), float(slide_m))
+    m.mk.set_state(poses=poses)
     m.STATE["hands"] = hands
 
 
@@ -85,24 +82,11 @@ def test_scene_and_catalog_geometry(m):
     assert m.SCORE_OVER == "end" and m.RUN_LIMIT_STEPS == 1800
     assert P.CANE_L == pytest.approx(0.290) and P.SLEEVE_L == pytest.approx(0.273)
     assert P.VIAL_OD == pytest.approx(0.0125) and P.VIAL_L == pytest.approx(0.049)
-    stack_m = (P.VIAL_REST_Z + P.VIAL_R) - P.BASE_Z
-    assert stack_m == pytest.approx(0.0132, abs=1e-5)
-    assert P.SLEEVE_IN_FLAT >= 0.0160
-    assert P.SLEEVE_IN_FLAT / math.cos(math.pi / 8.0) - 2.0 * P.CONTACT_OFF >= 0.0175
-    assert P.TAB_W >= 0.0210 and P.TAB_W > 2.0 * P.SLEEVE_R_OUT
-    for s in m.mk.MECH.bodies["cane"].shapes:
-        if not s.solid or s.pos[1] >= P.TAB_SHOULDER_Y:
-            continue
-        half = s.half_extents()
-        rot = m.mk.quat_to_matrix(s.quat)
-        corners = [
-            np.asarray(s.pos) + rot @ (np.array([sx, sy, sz]) * half)
-            for sx in (-1.0, 1.0)
-            for sy in (-1.0, 1.0)
-            for sz in (-1.0, 1.0)
-        ]
-        max_r = max(math.hypot(float(c[0]), float(c[2])) for c in corners)
-        assert max_r < P.SLEEVE_R_IN - P.CONTACT_OFF
+    assert P.STACK == pytest.approx(0.0132, abs=1e-6)
+    assert P.SLEEVE_OD == pytest.approx(0.0145) and P.SLEEVE_BORE == pytest.approx(0.0135)
+    assert 0.5 * (P.SLEEVE_BORE - P.STACK) == pytest.approx(0.00015)  # 0.15 mm a side when centred
+    assert P.TAB_W > P.SLEEVE_OD
+    assert not m.mk.MECH.joints  # no joint anywhere: nothing holds the sleeve on the cane but contact
     cane_p0, cane_r0 = m.mk.built_pose("cane")
     tab_end_w = cane_p0 + cane_r0 @ np.array([0.0, P.CANE_L, 0.0])
     slv_p0, _ = m.mk.built_pose("sleeve")
@@ -110,49 +94,59 @@ def test_scene_and_catalog_geometry(m):
     assert slv_p0[1] + 0.5 * P.SLEEVE_L == pytest.approx(-0.025)
 
 
-def test_zero_snap_foot_engagement_and_5n_vs_35n_wipe(m):
+def test_cane_fits_inside_the_sleeve_bore(m):
+    """Every solid collider of the cane's trough, and both seated vials, lie inside the 13.5 mm bore around the stack's
+    middle line (the inscribed circle of the 16 inside flats), so the sleeve can pass only straight."""
+    P = m.P
+    worst = 0.0
+    for s in m.mk.MECH.bodies["cane"].shapes:
+        half = s.half_extents()
+        if not s.solid or s.pos[1] - half[1] >= P.TAB_SHOULDER_Y - 1e-6:
+            continue
+        rot = m.mk.quat_to_matrix(s.quat) if s.quat is not None else np.eye(3)
+        for sx in (-1.0, 1.0):
+            for sy in (-1.0, 1.0):
+                for sz in (-1.0, 1.0):
+                    c = np.asarray(s.pos) + rot @ (np.array([sx, sy, sz]) * half)
+                    worst = max(worst, math.hypot(float(c[0]), float(c[2]) - P.BORE_Z))
+    assert worst <= P.SLEEVE_R_IN - 0.00002
+    assert worst >= P.SLEEVE_R_IN - 0.0002  # and the fit is snug, not a loose stand-in
+    vial_top = P.VIAL_REST_Z + P.VIAL_R - P.BORE_Z
+    assert vial_top == pytest.approx(P.SLEEVE_R_IN - 0.00015)
+
+
+def test_wall_breach_reading(m):
+    """Threaded straight, no cane point lies beyond the sleeve's inside flats; shifted 1.5 mm sideways (through its wall,
+    as a collider pushed through would be) the reading shows it."""
+    cane_pr = cane_pose_world(m, pos=(0.25, 0.00, m.TOP + 0.095), yaw=0.0)
+    threaded_state(m, cane_pr, 0.200)
+    assert m.wall_breach_mm() <= 0.01
+    threaded_state(m, cane_pr, 0.200, offset=(0.0015, 0.0, 0.0))
+    assert m.wall_breach_mm() >= 1.0
+
+
+def test_reading_where_the_sleeve_is(m):
     cane_pr = cane_pose_world(m, pos=(0.25, 0.00, m.TOP + 0.095), yaw=0.0)
     p_c, _ = cane_pr
-    # Approaching bent top tab: never engages
-    bad_slv = (p_c + np.array([0.0, m.P.CANE_L + 0.5 * m.P.SLEEVE_L - 0.005, 0.0]), EYE)
+    # Pushed against the bent top tab end: not on the cane, 0
+    bad_slv = (p_c + np.array([0.0, m.P.CANE_L + 0.5 * m.P.SLEEVE_L + 0.001, m.P.BORE_Z]), EYE)
     m.mk.set_state(poses={"cane": cane_pr, **vials_in_bays(m, cane_pr), "sleeve": bad_slv})
     m.STATE["hands"] = FAR
-    m.step()
-    assert not m.sleeve_mated() and m.score(None) == 0.0
-
-    # Coaxial telescope at 1.85 deg and s_mouth = 38 mm (> old 1.0 deg / 24 mm cliff): engages in-place without moving sleeve!
-    good_rot = m.mk.axis_angle((0.0, 0.0, 1.0), math.radians(1.85))
-    mouth_target = p_c + np.array([0.001, 0.038, 0.0])
-    good_slv_pos = mouth_target - good_rot @ np.array([0.0, 0.5 * m.P.SLEEVE_L, 0.0])
-    m.mk.set_state(poses={"cane": cane_pr, **vials_in_bays(m, cane_pr), "sleeve": (good_slv_pos, good_rot)})
-    m.step()
-    assert m.sleeve_mated()
-    assert m.mk.pose("sleeve")[0] == pytest.approx(good_slv_pos)
-    assert m.mk.pose("sleeve")[1] == pytest.approx(good_rot)
-
-    # Geometric coaxial enclosure (e.g. 3.0 deg off-axis about overlap midpoint, w_sleeve unmated) scores 0.25 and 0.5!
-    m.mk.mend_all()
+    assert not m.coaxial_enclosed() and steps(m, 1) == 0.0
+    # Threaded straight: 0.25 from 120 mm, 0.5 within 10 mm of the tab with the foot inside
+    for s_val, expected in ((0.110, 0.0), (0.135, 0.25), (0.263, 0.5)):
+        m.begin(0)
+        threaded_state(m, cane_pr, s_val)
+        assert m.coaxial_enclosed() and steps(m, 2) == expected
+    assert m.gap_to_tab_m() == pytest.approx(0.005) and m.foot_enclosed()
+    # Lying beside the cane (3 mm off its middle line) or turned 3 deg: not on it
     m.begin(0)
-    geom_rot = m.mk.axis_angle((0.0, 0.0, 1.0), math.radians(3.0))
-    for s_val, expected in ((0.140, 0.25), (0.263, 0.5)):
-        pivot = p_c + np.array([0.0, 0.5 * s_val, 0.0])
-        g_pos = pivot + geom_rot @ np.array([0.0, 0.5 * s_val - 0.5 * m.P.SLEEVE_L, 0.0])
-        m.mk.set_state(poses={"cane": cane_pr, **vials_in_bays(m, cane_pr), "sleeve": (g_pos, geom_rot)})
-        m.STATE["hands"] = FAR
-        assert not m.sleeve_mated() and steps(m, 2) == expected
-
-    # Coaxial advance to 120 mm -> 5.0 N wipe; asymmetric >0.35 N m push -> 35.0 N bind
-    mated_state(m, cane_pr, 0.120)
-    m.STATE["slv_rest"] = 0.0
-    m.step()
-    assert m.STATE["slide_force_n"] == pytest.approx(m.P.SLIDE_N, rel=1e-3)
-
-    p_s, _ = m.mk.pose("sleeve")
-    c_cock = m.mk.Contact("right robot", 2, -1, p_s + np.array([0.011, -0.110, 0.0]), np.array([-1.0, 0.0, 0.0]), 0.0, 6.0)
-    mated_state(m, cane_pr, 0.150, contacts={"sleeve": [c_cock]})
-    m.STATE["slv_rest"] = 0.100
-    m.step()
-    assert m.STATE["slide_force_n"] == pytest.approx(m.P.BIND_N, rel=1e-3)
+    threaded_state(m, cane_pr, 0.200, offset=(0.003, 0.0, 0.0))
+    assert not m.coaxial_enclosed() and steps(m, 1) == 0.0
+    threaded_state(m, cane_pr, 0.200, cock_deg=3.0)
+    assert not m.coaxial_enclosed() and steps(m, 1) == 0.0
+    threaded_state(m, cane_pr, 0.200, cock_deg=1.0)
+    assert m.coaxial_enclosed() and steps(m, 1) == 0.25
 
 
 def test_idle_start_scores_zero_with_no_fault(m):
@@ -167,7 +161,7 @@ def test_spilling_a_vial_latches_zero(m):
     m.STATE["hands"] = FAR
     assert steps(m, 1) == 0.0 and "spilled" in m.STATE["zero"]
     in_tray_cane = cane_pose_world(m, pos=(m.P.TRAY_CX, m.P.TRAY_CY - 0.135, m.TOP + m.P.TRAY_WALL + m.P.SLEEVE_R_OUT), yaw=0.0)
-    mated_state(m, in_tray_cane, m.P.SLIDE_MAX)
+    threaded_state(m, in_tray_cane, m.P.SLIDE_MAX)
     assert steps(m, m.P.HOLD_STEPS + 5) == 0.0
 
 
@@ -180,11 +174,11 @@ def test_unsleeved_cane_in_tray_latches_zero(m):
 
 def test_score_levels_quarter_half_and_full_with_hold_and_clearance(m):
     cane_air = cane_pose_world(m, pos=(0.25, 0.00, m.TOP + 0.095), yaw=0.0)
-    mated_state(m, cane_air, 0.110)
+    threaded_state(m, cane_air, 0.110)
     assert steps(m, 2) == 0.0
-    mated_state(m, cane_air, 0.135)
+    threaded_state(m, cane_air, 0.135)
     assert steps(m, 2) == 0.25
-    mated_state(m, cane_air, 0.263)
+    threaded_state(m, cane_air, 0.263)
     assert m.gap_to_tab_m() == pytest.approx(0.005) and m.foot_enclosed()
     assert steps(m, 2) == 0.5
 
@@ -194,14 +188,14 @@ def test_score_levels_quarter_half_and_full_with_hold_and_clearance(m):
         yaw=0.0,
     )
     near_hand = {"left": np.array([[m.P.TRAY_CX, m.P.TRAY_CY, m.TOP + 0.040]]), "right": FAR["right"]}
-    mated_state(m, in_tray_cane, m.P.SLIDE_MAX, hands=near_hand)
+    threaded_state(m, in_tray_cane, m.P.SLIDE_MAX, hands=near_hand)
     assert steps(m, m.P.HOLD_STEPS + 3) == 0.5
 
-    mated_state(m, in_tray_cane, m.P.SLIDE_MAX, hands=FAR)
+    threaded_state(m, in_tray_cane, m.P.SLIDE_MAX, hands=FAR)
     assert steps(m, m.P.HOLD_STEPS - 1) == 0.5
     # Shifting 4 mm (> 3 mm HOLD_DRIFT) restarts the 20-step hold
     shifted = (in_tray_cane[0] + np.array([0.004, 0.0, 0.0]), in_tray_cane[1])
-    mated_state(m, shifted, m.P.SLIDE_MAX, hands=FAR)
+    threaded_state(m, shifted, m.P.SLIDE_MAX, hands=FAR)
     assert steps(m, 1) == 0.5 and m.STATE["hold"] == 1
     # Benign tray shift > 25 mm on the bench does NOT zero the trial (Rules 4 & 7)
     shifted_tray = (np.array(m.scene.tray_start_pos(m.TOP)) + np.array([0.0, 0.045, 0.0]), EYE)
@@ -210,7 +204,7 @@ def test_score_levels_quarter_half_and_full_with_hold_and_clearance(m):
         pos=(m.P.TRAY_CX, m.P.TRAY_CY + 0.045 - 0.135, m.TOP + m.P.TRAY_WALL + m.P.SLEEVE_R_OUT),
         yaw=0.0,
     )
-    mated_state(m, cane_in_shifted, m.P.SLIDE_MAX, tray_pr=shifted_tray, hands=FAR)
+    threaded_state(m, cane_in_shifted, m.P.SLIDE_MAX, tray_pr=shifted_tray, hands=FAR)
     assert steps(m, m.P.HOLD_STEPS) == 1.0 and m.STATE["zero"] is None
 
 
@@ -221,7 +215,13 @@ def test_folder_invariants_and_no_pose_snap_rule():
     assert len(spec["title"]) <= 120 and len(spec["context"]) <= 1000 and len(spec["fidelity"]) <= 500
     task_txt = (HERE / "task.py").read_text()
     assert len(task_txt) <= 15_000
-    # Enforce t22's rule: zero write_pose / set_joint / mk.push in task.py, scene.py and demo.py
+    import ast
+
+    tree = ast.parse((HERE / "task.py").read_text())
+    instruction = next(ast.literal_eval(n.value) for n in tree.body if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "INSTRUCTION")
+    assert spec["instruction"] == instruction
+    assert spec["instruction"].endswith(", then let go and move both hands clear.")
+    # Zero write_pose / set_joint / mk.push in task.py, scene.py and demo.py
     for name in ("task.py", "scene.py", "demo.py"):
         code = (HERE / name).read_text()
         for banned in ("write_pose(", "set_joint(", "mk.push("):

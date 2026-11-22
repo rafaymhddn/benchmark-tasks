@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""PhysX mechanism and scoring-level trials for the CryoCane sleeving task (trials.py only; arms at ready except wrong_end_tab_block).
+"""PhysX mechanism and scoring-level trials for the CryoCane sleeving task (poses are written only here).
+
+The sleeve is a free body in true contact with the cane and vials (no joint): ``aligned_two_hand_push`` and
+``cocked_push_binds`` drive it with both arms, the second with the sleeve turned 12 deg off the cane's axis.
 
     scripts/rta simpy <id> mech/tasks/cryocane_sleeve/trials.py /workspace/robocurve/outputs/<id>
 """
@@ -35,27 +38,19 @@ def _place_cane_and_vials(m, foot_pos, rot) -> None:
     p_c = np.asarray(foot_pos, dtype=float)
     r_c = np.asarray(rot, dtype=float)
     m.mk.write_pose("cane", p_c, _quat(m, r_c))
-    m.mk.set_joint("slv_s", 0.0)
-    m.mk.set_spring("slv_s", rest=0.0, most=m.P.SLIDE_N)
     for idx, name in enumerate(m.VIALS):
         bay = m.P.VIAL_BAYS[idx]
-        vp = p_c + r_c @ np.array([0.0, m.P.bay_centre_y(bay), m.P.VIAL_REST_Z + 0.0002])
+        vp = p_c + r_c @ np.array([0.0, m.P.bay_centre_y(bay), m.P.VIAL_REST_Z + 0.0001])  # top 0.05 mm under the bore
         m.mk.write_pose(name, vp, _quat(m, r_c))
 
 
-def _place_mated_sleeve(m, foot_pos, rot, slide_m: float) -> None:
+def _place_threaded_sleeve(m, foot_pos, rot, slide_m: float) -> None:
+    """Cane and vials at ``foot_pos``/``rot``; the sleeve on the stack's middle line with its mouth ``slide_m`` onto it."""
     _place_cane_and_vials(m, foot_pos, rot)
     p_c = np.asarray(foot_pos, dtype=float)
     r_c = np.asarray(rot, dtype=float)
-    u_c = r_c[:, 1]
-    j_val = slide_m - m.P.CARRIAGE_BUILT_S
-    slv_pos = p_c + (slide_m - 0.5 * m.P.SLEEVE_L) * u_c
-    m.mk.set_joint("slv_s", j_val)
-    m.mk.write_pose("sleeve", slv_pos, _quat(m, r_c))
-    m.mk.set_spring("slv_s", rest=j_val, most=m.P.SLIDE_N)
-    m.mk.make("w_sleeve")
-    m.STATE["slv_rest"] = float(j_val)
-    m.STATE["max_slide_m"] = float(slide_m)
+    axis = p_c + m.P.BORE_Z * r_c[:, 2]
+    m.mk.write_pose("sleeve", axis + (slide_m - 0.5 * m.P.SLEEVE_L) * r_c[:, 1], _quat(m, r_c))
 
 
 def _run_loop(emb, m, seconds: float, step_fn=None) -> dict:
@@ -74,9 +69,8 @@ def _run_loop(emb, m, seconds: float, step_fn=None) -> dict:
                     "t (s)": t,
                     "score": float(res.info.get("score", 0.0)),
                     "zero": m.STATE.get("zero"),
-                    "mated": m.sleeve_mated(),
+                    "on cane": m.coaxial_enclosed(),
                     "slide (mm)": round(1000.0 * m.sleeve_slide_m(), 1),
-                    "wipe F (N)": round(float(m.STATE.get("slide_force_n", 0.0)), 2),
                     "vial radial (mm)": {v: round(1000.0 * m.vial_offsets(v)[0], 2) for v in m.VIALS},
                 }
             )
@@ -128,7 +122,7 @@ def wrong_end_tab_block(emb, m) -> dict:
             samples.append(
                 {
                     "t (s)": round((i + 1) / hz, 2),
-                    "mated": m.sleeve_mated(),
+                    "on cane": m.coaxial_enclosed(),
                     "score": float(res.info.get("score", 0.0)),
                     "zero": m.STATE.get("zero"),
                 }
@@ -145,7 +139,7 @@ def wrong_end_tab_block(emb, m) -> dict:
         "samples": samples,
     }
     out["pass"] = (
-        (not m.sleeve_mated())
+        (not m.coaxial_enclosed())
         and out["sleeve advance (mm)"] >= 8.0
         and mouth_past_tab_mm <= 2.5
         and out["report"]["zero"] is None
@@ -164,7 +158,6 @@ def roll_spill_zero(emb, m) -> dict:
 
     def hold_cane(_t: float) -> None:
         m.mk.write_pose("cane", foot, _quat(m, rot))
-        m.mk.set_joint("slv_s", 0.0)
 
     out = _run_loop(emb, m, 1.5, step_fn=hold_cane)
     out["pass"] = out["score at end"] == 0.0 and out["report"]["zero"] is not None and "spilled" in out["report"]["zero"]
@@ -186,8 +179,8 @@ def partial_quarter(emb, m) -> dict:
     from inspect_robots import Scene
 
     emb.reset(Scene(id="partial_quarter", instruction=m.INSTRUCTION), seed=0)
-    foot = np.array([m.P.MAT_CX, -0.020, m.TOP + m.P.MAT_T + m.P.SLEEVE_R_OUT + 0.001])
-    _place_mated_sleeve(m, foot, np.eye(3), 0.150)
+    foot = np.array([m.P.MAT_CX, -0.020, m.TOP + m.P.MAT_T + m.P.SLEEVE_R_OUT - m.P.BORE_Z + 0.001])  # sleeve 1 mm over the mat
+    _place_threaded_sleeve(m, foot, np.eye(3), 0.150)
     out = _run_loop(emb, m, 1.5)
     out["pass"] = out["score at end"] == 0.25 and out["report"]["zero"] is None
     return out
@@ -199,7 +192,7 @@ def seated_half(emb, m) -> dict:
     emb.reset(Scene(id="seated_half", instruction=m.INSTRUCTION), seed=0)
     foot = np.array([m.P.MAT_CX, -0.140, m.TOP + m.P.MAT_T + 0.5 * m.P.TAB_W + 0.001])
     rot_side = m.mk.axis_angle((0.0, 1.0, 0.0), math.radians(90.0))
-    _place_mated_sleeve(m, foot, rot_side, m.P.SLIDE_MAX)
+    _place_threaded_sleeve(m, foot, rot_side, m.P.SLIDE_MAX)
     out = _run_loop(emb, m, 1.5)
     out["pass"] = (
         out["score at end"] == 0.5
@@ -210,10 +203,9 @@ def seated_half(emb, m) -> dict:
     return out
 
 
-def two_deg_angled_slide(emb, m) -> dict:
-    """Pure arm-action bimanual run skewed deliberately by 1.75 deg yaw (> old 1.0 deg cliff): engages in-place with
-    zero pose snap, passes 0.25 at >= 120 mm, and reaches 0.5 at >= 258 mm."""
-    import checks as K
+def _two_hand_push(emb, m, name: str, cock_deg: float, seconds: float, tries: int | None = None) -> dict:
+    """The demo's own plan (cane lifted and turned by the left hand, sleeve by the right), then the closed-loop two-hand
+    slide with the sleeve's axis turned ``cock_deg`` about the vertical away from the cane's (demo.insert_moves)."""
     import demo
     import demo_kit as kit
     from inspect_robots import Scene
@@ -221,88 +213,60 @@ def two_deg_angled_slide(emb, m) -> dict:
     from inspect_robots_yam.packing import pack
     from yam_arena import station
 
-    emb.reset(Scene(id="two_deg_slide", instruction=m.INSTRUCTION), seed=0)
-    moves = demo.initial_plan()
-    Move = kit.Move
-    arms = {s: kit.Arm(s, station.BASES[s], moves[s]) for s in ("left", "right")}
+    emb.reset(Scene(id=name, instruction=m.INSTRUCTION), seed=0)
+    arms = {s: kit.Arm(s, station.BASES[s], mv) for s, mv in demo.initial_plan().items()}
+    plan = demo.Inserter(m, cock_deg=cock_deg, release=False)
+    if tries is not None:
+        plan.TRIES = tries
     hz = float(emb.info.control_hz)
-    skew = m.mk.quat_to_matrix(m.mk.yaw_quat(math.radians(1.25)))
-    ph = 0
-    saw_quarter, saw_half, samples = False, False, []
-    res = None
-    for i in range(int(round(22.0 * hz))):
+    samples, res, best, furthest, worst_breach, peak_contact = [], None, 0.0, -1.0, 0.0, 0.0
+    for i in range(int(round(seconds * hz))):
         t = i / hz
-        max_end = max(arms["left"].seconds, arms["right"].seconds)
-        if m.mk.MECH.poses and t >= max_end - 0.025:
-            if ph == 0:
-                p_c, r_c = m.cane_pose()
-                u_c = r_c[:, 1].copy()
-                u_c[2] = float(np.clip(u_c[2], -0.05, 0.05))
-                u_c /= np.linalg.norm(u_c)
-                p_s, r_s = m.mk.pose("sleeve")
-                u_s = r_s[:, 1]
-                tcp_cmd, rot_cmd = arms["right"].state(t)[:2]
-                tcp_act = m.mk.gripper("right")[0]
-                mouth_now = p_s + 0.5 * m.P.SLEEVE_L * u_s
-                # Deliberately skew sleeve ~1.8 deg off cane axis (> old 1.0 deg cliff!), mouth offset 1.8 mm <= 2.8 mm:
-                u_skew = skew @ u_c
-                r_fix = demo._align_rot(u_s, u_skew)
-                rot_goal = r_fix @ rot_cmd
-                mouth_after = tcp_act + r_fix @ (mouth_now - tcp_act)
-                perp = np.array([-u_c[1], u_c[0], 0.0])
-                mouth_goal = p_c - 0.006 * u_c + 0.0018 * perp
-                pos_goal = tcp_cmd + (mouth_goal - mouth_after)
-                arms["left"].moves += [Move(1.4, label="align"), Move(0.5, label="settle")]
-                arms["right"].moves += [Move(1.4, pos=pos_goal, rot=rot_goal, label="align ~1.8 deg"), Move(0.5, label="settle")]
-                ph = 1
-            elif ph == 1:
-                p_c, r_c = m.cane_pose()
-                u_c = r_c[:, 1].copy()
-                u_c[2] = float(np.clip(u_c[2], -0.04, 0.04))
-                u_c /= np.linalg.norm(u_c)
-                p_s, r_s = m.mk.pose("sleeve")
-                mouth_now = p_s + 0.5 * m.P.SLEEVE_L * r_s[:, 1]
-                perp = np.array([-u_c[1], u_c[0], 0.0])
-                to_foot = (p_c + 0.0018 * perp) - mouth_now
-                tcp_l = arms["left"].state(t)[0]
-                tcp_r = arms["right"].state(t)[0]
-                d_left = -0.055 * u_c
-                arms["left"].moves += [
-                    Move(1.5, label="enter"),
-                    Move(5.4, pos=tcp_l + d_left, push=(-2.5 * u_c).tolist(), label="thread"),
-                    Move(0.8, push=(0.0, 0.0, 0.0), label="hold"),
-                ]
-                arms["right"].moves += [
-                    Move(1.5, pos=tcp_r + to_foot + 0.032 * u_c, label="enter 32 mm"),
-                    Move(5.4, pos=tcp_r + to_foot + d_left + 0.273 * u_c, push=(3.2 * u_c).tolist(), label="thread"),
-                    Move(0.8, push=(0.0, 0.0, 0.0), label="hold"),
-                ]
-                ph = 2
-        la, _ = arms["left"].action(t)
-        ra, _ = arms["right"].action(t)
+        plan.direct(t, arms)
+        try:
+            la, _ = arms["left"].action(t)
+            ra, _ = arms["right"].action(t)
+        except ValueError as err:  # the hand cannot push further without passing a joint limit: the trial ends here
+            plan.log.append({"t": round(t, 2), "stage": "arm limit", "error": str(err)[:160]})
+            break
         res = emb.step(Action(data=pack(la, ra)))
-        sc = float(res.info.get("score", 0.0))
-        saw_quarter |= sc == 0.25
-        saw_half |= sc >= 0.5
+        on, _, y_hi, rad, ang = m.sleeve_span_on_cane()
+        best = max(best, y_hi if on else 0.0)
+        breach = m.wall_breach_mm()
+        worst_breach = max(worst_breach, breach)
+        touch = [c for c in m.mk.contacts("sleeve") if c.other in ("cane", "vial_a", "vial_b")]
+        contact_n = float(sum(c.force for c in touch))
+        peak_contact = max(peak_contact, contact_n)
+        if plan.stage in ("thread", "seated", "bound"):
+            furthest = max(furthest, plan.mouth()[0])
         if (i + 1) % 10 == 0:
-            _, _, _, _, ang_now = m.sleeve_span_on_cane()
-            samples.append(
-                {
-                    "t (s)": round((i + 1) / hz, 2),
-                    "mated": m.sleeve_mated(),
-                    "slide (mm)": round(1000.0 * m.sleeve_slide_m(), 1),
-                    "ang (deg)": round(ang_now, 2),
-                    "score": sc,
-                }
-            )
-    out = {
-        "score at end": float(0.0 if res is None else res.info.get("score", 0.0)),
-        "saw 0.25": saw_quarter,
-        "saw 0.5": saw_half,
-        "report": m.report(),
-        "samples": samples,
-    }
-    out["pass"] = saw_quarter and saw_half and out["score at end"] == 0.5 and out["report"]["zero"] is None
+            samples.append({"t (s)": round((i + 1) / hz, 2), "stage": plan.stage, "on cane": on, "cane pitch (deg)": round(m.cane_pitch_deg(), 1),
+                            "mouth (mm)": round(1000.0 * y_hi, 1), "radial (mm)": round(1000.0 * rad, 2),
+                            "angle (deg)": round(ang, 2), "push (N)": plan.push_n, "contact (N)": round(contact_n, 1),
+                            "wall breach (mm)": round(breach, 2), "score": float(res.info.get("score", 0.0))})
+    return {"score at end": float(0.0 if res is None else res.info.get("score", 0.0)),
+            "furthest mouth on the cane (mm)": round(1000.0 * best, 1), "furthest mouth station (mm)": round(1000.0 * furthest, 1),
+            "worst wall breach (mm)": round(worst_breach, 2), "peak sleeve contact (N)": round(peak_contact, 1),
+            "log": plan.log, "report": m.report(), "samples": samples}
+
+
+def aligned_two_hand_push(emb, m) -> dict:
+    out = _two_hand_push(emb, m, "aligned_push", 0.0, 40.0)
+    out["pass"] = (out["score at end"] == 0.5 and out["report"]["zero"] is None and out["report"]["gap to top tab (mm)"] <= 10.0
+                   and out["worst wall breach (mm)"] < 0.5)
+    return out
+
+
+def cocked_push_binds(emb, m) -> dict:
+    out = _two_hand_push(emb, m, "cocked_push", 12.0, 34.0, tries=0)
+    out["pass"] = (out["score at end"] == 0.0 and out["report"]["zero"] is None and out["furthest mouth on the cane (mm)"] < 120.0
+                   and out["worst wall breach (mm)"] < 0.5)
+    return out
+
+
+def slightly_cocked_push(emb, m) -> dict:
+    out = _two_hand_push(emb, m, "slightly_cocked_push", 3.0, 34.0, tries=0)
+    out["pass"] = out["worst wall breach (mm)"] < 0.5 and out["report"]["zero"] is None
     return out
 
 
@@ -312,7 +276,9 @@ TRIALS = {
     "unsleeved_in_tray_zero": unsleeved_in_tray_zero,
     "partial_quarter": partial_quarter,
     "seated_half": seated_half,
-    "two_deg_angled_slide": two_deg_angled_slide,
+    "aligned_two_hand_push": aligned_two_hand_push,
+    "cocked_push_binds": cocked_push_binds,
+    "slightly_cocked_push": slightly_cocked_push,
 }
 
 
