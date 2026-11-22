@@ -1,81 +1,131 @@
-# Reconnect a bathroom-sink pop-up stopper to its rear-facing pivot rod under the basin and lift the stopper open
+# Reconnect a pop-up stopper under a wall-hung basin: rod through the stopper, pivot nut on snug, stopper open
 
-Instruction: `Lift and align the sink's pop-up stopper from inside the basin while sliding the pivot rod forward through the rear drain port and stopper eye under the basin until its ball seats, then press the rear rod down to hold the stopper open.`
+**Instruction** (`task.py`): "Push the pivot rod through the stopper's hole into the drain port, thread the pivot nut on
+until snug, press the rod down so the stopper lifts open, then let go and move both hands clear."
 
-Files: `task.json`, `README.md`, `task.py` (rules & `score()`), `parts.py` (43 figures & sources), `scene.py`, `collar_cad.py` (closed 2-manifold collar STL), `mechkit.py`, `demo_kit.py`, `checks.py`, `demo.py`, `trials.py`, `test_sink_stopper.py`, `start_top.png`, `start_top_policy.png`, `start_left_wrist.png`, `start_right_wrist.png`, `end_top.png`, `end_top_policy.png`. Procedural shapes only; no external meshes, textures, or sounds.
+## The hard part: starting the pivot nut square, under the basin
 
-## Why this job matters and why it needs two hands
+The pop-up's pivot rod is out of its drain: its ball rests at the mouth of the port at the drain's back, and the pivot
+nut hangs on the rod behind the ball. One hand pushes the rod 10 mm in, so that its tip goes through the hole in the
+stopper's shaft and the ball seats, and holds it there; the other slides the nut forward along the rod and sets it on
+the port's thread start, square and on the axis: started crooked, the plastic thread does not catch. The nut goes on
+one turn by hand until its washer is snug on the ball; then the rod's rear is
+pressed down so the stopper lifts about 10 mm (Kohler: about 3/8 in), and the washer's grip on the ball holds it
+there when let go, as a pop-up does before its clevis strap is hooked up.
 
-Maintenance workers (O*NET 49-9071, ~1.5M US; BLS OES) and plumbers (O*NET 47-2152, ~480k US) reconnect lavatory pop-up stoppers after clearing hair or replacing seals. Under a full-depth counter, the port points rearward (`+x`) behind the `1-1/4 in` tailpiece while the eye sits inside the opaque tee `6.2 mm` below the port and `90 deg` off line. Left hand lifts the `35.6 mm` cap ~`6 mm` and turns `-90 deg`; Right hand enters the front doorway, curves around `-y` of the `38 mm` pipe with vertical jaws (`closing = [0, 0, -1]`, wrist camera horizontal), pinches the clevis, snaps the `18.3 mm` ball `32 mm` forward into its rear collar seat through the eye, and presses the rod down ~`12.9 deg` so washer friction holds the stopper open.
+## Scene
 
-## Hardware, layout, and grasps
+Positions in m from the midpoint between the arm bases (+x away from the arms, +y left, z up from the bench). One
+fixed layout (`object_jitter=0`): the seed changes nothing. Both arms at ready.
 
-`station` frame in metres (`x` forward of arm bases, `y` left, `z` over `0.7475 m` benchtop; `object_jitter = 0`).
+| Item | Product | At |
+|---|---|---|
+| Basin | Duravit ME by Starck wall-hung washbasin 550 x 440 x 180 mm, bowl 520 x 290 mm (EU 233555AA00, US 2335550000), hung low: its underside 246 mm over the bench at the drain | front edge x 0.295, wall x 0.735 |
+| Drain | 1-1/4 in pop-up body (31.8 mm bore, 54 mm flange); its pivot port faces back (+x), axis 155 mm over the bench; port thread 25 x 1.6 mm (estimate), first full crest marked | axis (0.455, 0.000) |
+| Trap | Dearborn P9701 1-1/4 in plastic P-trap (J-bend 5 in, arm 7-1/2 in), J swung 20 deg left, arm cut to 17 cm | under the drain |
+| Stopper | Danco 11041 (132 x 35.6 mm), closed; its 6th hole (the five above taped) facing the port | in the drain |
+| Pivot rod | Danco 88532 ball rod (150 x 5.5 mm, 18.3 mm ball, 4.5 mm tip), 22 x 14 x 16 mm clevis connector 68 mm behind the ball; ball 10 mm out of its seat | ball at (0.495, 0.000) |
+| Pivot nut | plastic, 31 mm across its knurl, 16 mm long; its washer (4 rubber beads) faces the ball | on the rod behind the ball |
 
-| Body | Buyable / cut hardware (US & EU) & dimensions | Start (`z` over bench) | Grasp (`<= 94 mm`, `<= 160 mm`) |
+Pictures, each with a 320 x 176 twin as the policy sees it: `start_top.png` (`start_top_policy.png`),
+`start_left_wrist.png` (`start_left_wrist_policy.png`), `start_right_wrist.png` (`start_right_wrist_policy.png`),
+`under_basin_left_wrist.png` (`under_basin_left_wrist_policy.png`: the left wrist as the nut is set on the thread
+start), `end_top.png` (`end_top_policy.png`). As in a real repair, the top camera sees the basin and the hands work by
+the wrist views under it.
+
+## Scoring (`score()` in `task.py`; the same numbers in `task.json`)
+
+**Threaded**: the nut counts as threaded only if its thread caught at a square start: its front face set on the port's
+first thread (at most 0.4 mm onto the washer), coaxial within 0.5 mm and square within 1.5 deg; a nut started crooked
+does not catch. Turned back 3 deg past the start it comes off; it can start again once 3 mm off the port.
+
+Whole-trial 0: the rod's ball or the nut below 30 mm over the bench (fallen). At the end:
+
+- **1.0**: the rod in the port through the stopper's hole (ball within 3 mm of its seat, tip 3 mm or more past the
+  stopper's middle), the nut threaded on snug (within 20 deg of where its thread stops), the stopper lifted 8 to 22 mm
+  over the flange (within 4 mm of the drain's axis, within 8 deg of upright) for 1.0 s with at most 2 mm drift, both
+  hands at least 30 mm clear of the stopper, rod, nut and drain, and the stopper, rod and nut still (under 25 mm/s).
+- **0.5**: the rod in the port through the stopper's hole and the nut threaded on snug, short of 1.0.
+- **0.25**: the rod in the port through the stopper's hole, the nut not snug.
+- **0**: otherwise.
+
+Judge: snug is the nut turned on by hand until it stops; a 150 mm rule on the stopper's lift; the trial video for a
+fall and for 1 s of stillness after the hands leave.
+
+## Mechanics in the simulation
+
+| Stated force | Where (`task.py`, `scene.py`) | Acts on, reaction on | What ends it |
 |---|---|---|---|
-| `vanity` (fixed) | `18 mm` birch (`y = -0.255..+0.205`, doorway `x = 0.334`, full-height walls to `x = 0.622, z = 0.204`), `z = 0.172` surround (`x = 0.334..0.444`), right shelf (`z = 0.204`), `160 x 424 x 9 mm` clear acrylic rear L-roof (`x = 0.444..0.604, z = 0.204` + `23 mm` lip), `5 mm` white ABS basin (`110 x 190 x 42` outer, `100 x 180 x 38 mm` inner, `z = 0.130`, `40 x 40 mm` hole), mat, cradle `0.563..0.590` | Fixed | Carcass (`checks.py` 8-link & roof block) |
-| `drain` (kinematic) | `1-1/4 in` (`31.8 / 38.0 mm`) tee (`ASME A112.18.2`; Danco `80767` / Cornat `TEC317405`), `54.0 mm` flange `z = 0.136`, `+x` port `z = 0.054` (`seat x = 0.401`) + `PETG` 4-slot collar (`collar_cad.py`, `26.4 x 19.0 mm`, `19.2 mm` bore tapped to `80767` thread, est. `20 x 1.5 mm`, `x = 0.417`) | `(0.375, +0.035)` | Fixed (`240 Hz` forces) |
-| `stopper` (`36 g`) | Danco `11041` chrome ABS (`132.1 x 35.6 mm`; Cornat `TEC317414` `35 x 120 mm`), holes `#1-3, #5-6` taped leaving `#4` (`8.5 x 10.0 mm` eye `88.2 mm` below seal) | `(0.375, +0.035, 0.136)`, `+90 deg` | Left: `54 -> 35.6 mm`, `z <= 159.5 mm` (`37.7 N/pad`) |
-| `pivot_rod` (`44 g`) | Danco `88532` steel rod (`150 x 5.5 mm`, `18.3 mm` ball, `27.5 x 4.5 mm` tip; Cornat `TEC317405` + `22 x 14 x 16 mm` clevis `68 mm` behind ball), red band `16 mm` behind ball | Ball `(0.433, +0.035, 0.054)` | Right: `36 -> 16 mm`, `z = 60 mm` (`36.2 N/pad`) |
+| Thread | `_step_thread()`: once the nut is set square on the start, a hidden carrier (a slide and three hinges on the port's axis) is welded to it where it stands; the slide follows the turn, 1.6 mm a turn; `set_joint` and `push` move only the carrier, never the nut | the nut; the drain | turned 3 deg back past the start (the weld is cut) |
+| Thread running torque 0.03 N m | the carrier hinges' springs, capped at 0.03 N m, their rest following the turn | the nut; the drain | (none) |
+| Thread's end | the hinges' stops, one turn (360 deg) from the start | the nut; the drain | (none) |
+| Washer | 4 rubber beads on the nut (4.3 N in all at snug, friction 1.0) on the ball: contact only | the rod's ball; the nut, and through the ball the seat in the drain | the nut turned back |
 
-## Can it be seen
+The stopper is lifted only by the rod's tip under its hole's top bar, and held only by the washer's grip on the ball.
 
-Roofed to `x = 0.622 m`, the `160 x 424 x 9 mm` rear acrylic L-panel (`z = 0.204 m`) collides solidly (`-4.5 mm` block in `checks.py`) while `mk.show` hides its face inside an aqua border so `top_cam` (`start_top.png`, `start_top_policy.png`) sees the `35.6 mm` cap and yellow-zinc rod (`start_left_wrist.png`, `start_right_wrist.png` show wrists). At completion (`end_top.png`, `end_top_policy.png`), the rod sits `32 mm` forward and the stopper stands `8.99 mm` open.
+Peak contact forces in the reference run (each pair pushes both ways): the ball on its seat in the drain 33 N (a
+late stroke pressing nut and ball on), the washer on the ball 6.2 N (peak while the strokes turn it; 4.3 N at rest), the nut's front on the ball's seat ring 2.4 N,
+the tip under the stopper's hole bar 0.5 N, the stopper on the drain 1.8 N. Hands: pads pinching the nut 23.6 N
+each, the stroking fingertip 23 N, pads on the clevis 14.8 N each: every finger under 40 N.
 
-![start top](start_top_policy.png) ![end top](end_top_policy.png) ![left wrist](start_left_wrist.png) ![right wrist](start_right_wrist.png)
+**Torque to snug (estimate)**: at snug the four beads press the ball with 4.3 N in all (trial `turned_on_snug`);
+turning drags them round at 7.8 mm with friction 1.0: 4.3 x 1.0 x 0.0078 = 0.034 N m, plus 0.03 N m of thread: 0.064 N
+m. The trial's rising torque turned the nut to its stop at 0.072 N m: lighter than a real nut
+hand-tightened (the maker: hand-tighten, no tool).
 
-## Mechanics, bilateral forces, and stand-ins
+**Why the stopper stays open**: the same contacts, 6.5 mm from the ball's pitch axis, take 4.3 x 1.0 x 0.0065 = 0.028
+N m to turn the ball; the rod and stopper put 0.018 N m on it (the rod's rear 0.029 N m down, the stopper on the tip
+0.011 N m up), so the rod stays where it was pressed. Trial `pressed_open_and_let_go`: pressed 23.5 deg and let go,
+the stopper stood 11.85 mm open from 1 s to 30 s. Grip and friction are estimates.
 
-`240 Hz` PhysX contacts only — zero `weld`, `push`, proximity latches, or `write_pose`/`set_joint` in `task.py`, `scene.py`, or `demo.py` (`trials.py` sets poses for partial/foul checks):
+## Key figures and their sources
 
-| Interaction | Bilateral pair | Condition & `demo.py` reading |
+`parts.py` holds all 54 figures with their sources and links (18 maker, 1 standard, 3 listing, 21 estimate, 11 ours).
+
+| Figure | Value | Source |
 |---|---|---|
-| Bore, port & `8.5 x 10.0 mm` eye | `stopper` <-> `drain` / `pivot_rod` | Closed stem blocks rod `23.3 mm` short (`37.2 N` in `blocked_closed`); lifted ~`6 mm` & turned `-90 deg`, `4.5 mm` tip passes `10.65 mm` past axis. |
-| Collar (`4.2 kN/m`) & washer (`12.5 kN/m`, `mu = 1.1`) | `pivot_rod` ball <-> `drain` port | Advancing `32.0 mm` (`mark: 32.0 -> -0.38 mm`, seat `0.07 mm`) clicks `18.3 mm` ball past 4 collar beads (`68.0 N` peak) into 4 beads (`~0.43 N m` hold; `3.21 N` rest). |
-| Rear-rod lever lift | `pivot_rod` tip <-> `stopper` eye | Pressing rod down `12.9 deg` lifts `36 g` stopper `8.99 mm` open; after release (`hands clear 221.8 mm`), `pivot_rod` supports `stopper` (`0.38 N`, `0.00 mm` drift, `89` steps). |
+| Basin; bowl | 550 x 440 x 180 mm; 520 x 290 mm | maker: https://www.duravit.com/de-de/p/ME-by-Starck-Waschtisch-233555AA00/ (US 2335550000) |
+| P-trap: tube, J-bend, legs apart, arm | 1-1/4 in, 5 in, 3-1/2 in, 7-1/2 in | maker: Dearborn P9701 submittal drawing (Oatey) |
+| Hand-tighten the pivot nut, no tool | | maker: Oatey lift rod drain sheet |
+| Stopper lift when open | about 9.5 mm (3/8 in) | maker: Kohler 115999 sheet |
+| Stopper: height, head, to 6th hole | 132.1, 35.6, 115.3 mm | listing: Danco 11041 (mrosupreme.com); EU Cornat TEC317414 |
+| Rod: shaft, ball, tip | 150 x 5.5, 18.3, 4.5 mm | maker: Danco support answers for 88532 |
+| Drain bore; flange | 31.8 mm (1-1/4 in); 54 mm | standard: ASME A112.18.2; maker: Delta RP5651 |
+| Port thread; nut | 25 x 1.6 mm; 31 x 16 mm, 10 g | estimate: ball bore plus walls; 16 per inch |
+| Washer beads | 1.1 N each at snug, friction 1.0 | estimate: holds 1.6 times the rod's weight |
+| Thread running torque | 0.03 N m | estimate: half a dry steel 5/8-18 thread's |
+| Catch: coaxial, square | 0.5 mm, 1.5 deg | estimate: 2/3 of a 0.75 mm flank; 60 % of atan(0.8/25) |
 
-**Stand-ins:** (1) `PETG` 4-slot collar (`python3 mech/tasks/sink_stopper/collar_cad.py snap_collar.stl`: `10 mm` skirt, `19.2 mm` bore tapped to `80767` thread, est. `20 x 1.5 mm`, over `88532` washer; `9 mm` crown) replaces turning a nut while keeping `32 mm` seating and ball hold physical; (2) tape covers unused holes on `11041` leaving `#4`; (3) the `9 mm` acrylic roof keeps the full-depth barrier while letting `top_cam` see the rod. Water, P-trap, and faucet strap are unmodeled.
+## Fidelity: what the simulation stands in for
 
-## Scoring, shortcuts, and checks
+- The thread is its last turn before snug (the nut's crests ride over the port's lead before it), carried by the
+  hidden carrier; the catch, turn-back and stop are rules, the washer and every lift are contacts.
+- The port's lead and its first crest (the marked land at the thread start) do not touch the nut: the kit filters a
+  pair of bodies for the whole run only. A caught nut is held by the thread alone; one not yet caught stops where its
+  washer meets the seated ball, which is where the thread starts.
+- Under the fingertips' up to 23 N the carried nut gives up to 1.2 mm and 3.3 deg (the hidden chain); a real thread would not.
+- The nut collides as 36 facets round the front 6.5 mm of its knurled skirt and 12 flats behind, where the pads
+  pinch it. The fingertips turn it by stroking down its side, where a thumb would roll it.
+- No water, lift rod or clevis strap.
 
-Tools: `150 mm` rule, `100 mm` square, `30 mm` block, and trial video (fall foul checked from video; end photo confirms rest state). Run limit: `1,000 steps (50 seconds at 20 Hz)`.
+## First minutes of a real trial (about 6 minutes)
 
-- **`0.0` (fall foul, latched):** ball `< 25.0 mm` over bench or unseated tail `< 4.0 mm` onto floor (`foul_rod_drop`). Lifting the stopper out is unlatched (`lift_inspect_recover`: `0.0` while out, `1.0` when coupled).
-- **`0.5` (rest `<= 25 mm/s`, hands `>= 30.0 mm` clear):** red mark `<= 3.5 mm` from `x = 0.417 m` (`ball <= 3.5 mm` off throat) and stopper upright (`radial <= 4.0 mm`, `tilt <= 8.0 deg`, `gap in [-2.0, 22.0] mm`) without `1.0` hold (`seated_half`: `3.5 mm -> 0.5`).
-- **`1.0`:** `0.5` seated plus cap held open `8.0..22.0 mm` (`radial <= 3.5 mm`, `tilt <= 6.0 deg`) for `1.0 s` (`20 steps`) within `2.0 mm` drift.
-- **Shortcuts blocked:** top-down rear reach hits the `9 mm` acrylic roof; unaligned shove hits closed stem (`0.0`); over-lift misses eye (`<= 0.5`) or left out/crooked fails `radial <= 3.5 mm` / `gap <= 22.0 mm` (`0.0`).
+- Port thread: thread gauge and calipers (est. 1.6 mm pitch, 25 mm). 1 min.
+- Washer grip: hand-tighten the nut, hang a luggage scale on the clevis 68 mm behind the ball and pull down until the
+  rod turns (est. 0.028 N m: 0.4 N). 2 min.
+- Stopper: press the rod down until the stopper is up 10 mm (rule), let go, read it again after a minute. 2 min.
+- Reset: nut off to the rod's rear, rod pulled back 10 mm, stopper closed with its hole to the port. 1 min.
 
-## Key figures and sources (`parts.py`)
+A different reading replaces the estimate.
 
-`parts.FIGURES` totals `43`: `7` maker, `1` standard, `3` listing, `21` our fixture, `11` estimate.
+## Runs
 
-| Figure (`parts.py`) | Value | Source |
-|---|---|---|
-| Danco `11041` height, head, 6th hole; Cornat `TEC317414` | `132.1`, `35.6`, `115.3 mm`; `35 x 120 mm` | Listing: `"5.2 in in total length with 1.4 in OD head... last hole is 4.54 in"` (`https://mrosupreme.com/products/danco-11041-pop-up-sink-stopper-pop-up-plastic-chrome`); Cornat `"3,5 x 12 cm"` (`https://www.bueromarkt-ag.de/waschbeckenstoepsel_cornat_exzenterstopfen_durchschnitt_35_mm,p-tec317414.html`) |
-| Danco `88532` shaft, thread-in, ball, inner stub | `150 x 5.5`, `4.0`, `18.3`, `27.5 x 4.5 mm` | Maker (DancoSupport on `https://www.homedepot.com/p/DANCO-Universal-Ball-Rod-for-Pop-Up-Drains-88532/203193993`, search-indexed): `"150 mm (5.9 inches)"`, `"5.5 mm"`, `"4 mm"`, `"Large Ball: Diameter = 18.3 mm"`, `"27.5 mm"`, `"about 4.5 mm at the tip"` |
-| Drain bore & flange (`ASME A112.18.2`; Cornat `TEC317405`) | `31.8`, `54.0 mm` | Standard `ASME A112.18.2`; Delta `RP5651` `2-1/8 in`; Cornat `1 1/4 Zoll` (`https://www.bueromarkt-ag.de/ablaufgarnitur_cornat_tec317405_aus_messing,p-tec317405.html`) |
-| Cap `12.5 mm`, eye `8.5 x 10.0 mm` at `88.2 mm`, `36 / 44 g`, OD `38.0 mm`, `80767` port thread `20.0 x 1.5 mm`, `k = 12.5 / 4.2 kN/m`, `mu = 1.1` | see left | Estimates: `132.1 - 115.3 - 4.3 mm`; `#4` of 6 scaled from `1.4 in` head photo; ABS/steel/brass volumes; `31.8 + 2x3.1 mm`; `0.78 in` pivot-nut thread; bead preload (`~8-10 N` click, `~0.43 N m` hold) |
-| Full-depth carcass, `9 mm` acrylic roof, `5 mm` ABS basin (`110 x 190 x 42 mm`), `PETG` collar, limits | see `parts.py` | Our fixture: cut/printed sizes & tolerances |
+- **Reference run** (`--check` sk19): 1.0 at 59.9 s of the 90 s limit (0.5 at 41.1 s). The thread caught at 13.25 s
+  (0.29 mm off the axis, 0.19 deg); 20 strokes turned the nut to its stop; the rod pressed 22 deg, stopper 10.7 mm.
+- **Trials** (tr3), all pass: start settles 1.4 mm; caught at the first step; 3 and 2 deg starts never catch; turned
+  back it lets go; snug 0.5; let go at 23.5 deg, 11.85 mm from 1 s to 30 s, 1.0; both falls 0.
 
-### First minutes of a real trial (~6 minutes)
+## Files and commands
 
-Check with a thread gauge & `150 mm` calipers (`2 min`) the `80767` port thread (est. `20.0 x 1.5 mm`; sets the tap for the `19.2 mm` bore) and `#4` eye (`8.5 x 10.0 mm` at `88.2 mm`), weigh both parts (`1 min`), check with a `2 kg` (`20 N`) spring scale (`2 min`) the `~8-10 N` collar click and `>= 8 mm` open hold, and time the `20 s` reset (`1 min`); a different reading replaces the estimate.
-
-## How this task differs
-
-Unlike surface drain tasks (wand or plunging), peg-in-hole, or RoboCasa / BEHAVIOR-1K faucet/cabinet tasks, this task requires bimanual blind alignment under a full-depth counter: curving around a pipe through a doorway to thread a rear (`+x`) rod through a hidden eye and lever the stopper open.
-
-## How to run
-
-- Checks (`< 2 s`): `scripts/rta check mech/tasks/sink_stopper`
-- Trials (`~45 s`): `scripts/rta simpy tr1 mech/tasks/sink_stopper/trials.py /workspace/robocurve/outputs/tr1`
-- Demo (`~20 s` sim, `~1.5 min` wall): `scripts/rta demo d1 mech/tasks/sink_stopper`
-- Dream-1 (`1,000 steps / 50 s` sim, `~3-4 min` wall; `--seed 0` -> seed `1415158438`, fixed layout):
-
-```bash
-inspect-robots run --embodiment yam_arena --policy dream \
-  -E task=mech/tasks/sink_stopper/task.py -E object_jitter=0 -E control_hz=20 -E cam_width=320 -E cam_height=176 \
-  --instruction "Lift and align the sink's pop-up stopper from inside the basin while sliding the pivot rod forward through the rear drain port and stopper eye under the basin until its ball seats, then press the rear rod down to hold the stopper open." \
-  --scorer task_score --max-steps 1000 --seed 0 --no-prompt --store-frames --log-dir outputs/dream_sink_stopper
-```
+`task.py` rules; `parts.py` figures; `scene.py` shapes; `demo.py` reference run; `checks.py` reach, clearances;
+`trials.py` PhysX trials; `test_sink_stopper.py` rule tests.

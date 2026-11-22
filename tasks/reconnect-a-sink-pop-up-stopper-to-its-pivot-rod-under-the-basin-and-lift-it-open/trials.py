@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
-"""G2 PhysX trials for sink_stopper: verifies blocked shortcut, both zero rules, 0.5 seated, and 1.0 held open.
+"""PhysX trials for sink_stopper: the start (its pictures; it settles), the thread's catch where the nut stands, a crooked
+start that never catches, turning back off the start, the nut turned on to snug (0.5), the rod pressed down and let go
+(1.0, with the stopper's drift over 30 s), and both falls (0).
 
     scripts/rta simpy <id> mech/tasks/sink_stopper/trials.py /workspace/robocurve/outputs/<id>
+
+Only here are poses written by hand: the rod, stopper and nut are put in place with write_pose, the rod is held level
+by writing it each step until the trial lets go, and the nut is pressed, turned or pressed down with push() forces and
+torques the way fingers would. The arms stay at ready.
 """
 
 from __future__ import annotations
@@ -16,11 +22,14 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-import checks as K  # noqa: E402
 import parts as P  # noqa: E402
 
+PRESS_ON = 3.0  # N: the nut pressed onto the washer while it is set on the start (a fingertip's push)
+PAIRS = {"nut_rod": ("pivot_nut", "pivot_rod"), "rod_drain": ("pivot_rod", "drain"), "rod_stopper": ("pivot_rod", "stopper"),
+         "nut_drain": ("pivot_nut", "drain"), "stopper_drain": ("stopper", "drain")}
 
-def _ready_action():
+
+def ready_action():
     from inspect_robots.types import Action
     from inspect_robots_yam.packing import pack
     from yam_arena.constants import READY
@@ -28,139 +37,205 @@ def _ready_action():
     return Action(data=pack(np.r_[READY, 1.0], np.r_[READY, 1.0]))
 
 
-def _quat(m, rot) -> tuple[float, float, float, float]:
-    q = m.mk.matrix_to_quat(rot)
-    return (float(q[0]), float(q[1]), float(q[2]), float(q[3]))
+class Trial:
+    def __init__(self, emb, name: str):
+        from inspect_robots import Scene
+
+        self.emb, self.m = emb, emb.task.module
+        self.mk = self.m.mk
+        emb.reset(Scene(id=name, instruction=self.m.INSTRUCTION), seed=0)
+        self.t, self.rows, self.res, self.peaks = 0.0, [], None, dict.fromkeys(PAIRS, 0.0)
+        self.hold_rod = True
+
+    def seat(self, name: str, pos, rot=None) -> None:
+        q = None if rot is None else tuple(float(v) for v in self.mk.matrix_to_quat(np.asarray(rot, dtype=float)))
+        self.mk.write_pose(name, tuple(float(v) for v in pos), q)
+
+    def rod_level(self) -> None:
+        self.seat("pivot_rod", (P.X_DRAIN + P.SEAT_OFFSET_X, P.Y_DRAIN, self.m.TOP + P.PORT_Z), np.eye(3))
+
+    def nut_on_start(self, gap: float, tilt_deg: float = 0.0) -> None:
+        """The nut's front face ``gap`` from the thread start (negative: pressed on), on the port's axis, turned
+        ``tilt_deg`` about the vertical."""
+        rot = self.mk.axis_angle((0.0, 0.0, 1.0), math.radians(tilt_deg))
+        self.seat("pivot_nut", (P.X_DRAIN + P.U_START + gap, P.Y_DRAIN, self.m.TOP + P.PORT_Z), rot)
+
+    def reading(self) -> dict:
+        m = self.m
+        return {"t": round(self.t, 2), "score": float(self.res.info.get("score", 0.0)) if self.res is not None else None,
+                "engaged": m.thread_engaged(), "cw_deg": round(m.thread_cw_deg(), 1), "land_gap_mm": round(1000.0 * m.land_gap(), 3),
+                "nut_off_mm": round(1000.0 * m.nut_xy_off(), 3), "nut_tilt_deg": round(m.nut_tilt_deg(), 2),
+                "gap_mm": round(1000.0 * m.stopper_gap(), 2), "pitch_deg": round(m.rod_pitch_deg(), 2),
+                "ball_seat_mm": round(1000.0 * m.ball_seat_offset(), 2), "rod_in": m.rod_in_port(), "hold": m.STATE.get("hold", 0),
+                "forces_N": {k: round(self.mk.contact_force(a, b), 2) for k, (a, b) in PAIRS.items()}}
+
+    def step(self, seconds: float, load=None, every: int = 4, until=None) -> dict:
+        """Step with the arms at ready; ``load(t)`` puts the trial's pushes on before each step; stops early once
+        ``until()`` holds."""
+        hz = float(self.emb.info.control_hz)
+        act = ready_action()
+        for i in range(int(round(seconds * hz))):
+            if self.hold_rod:  # a hand holding the rod level: put level and its weight carried (it pivots on its ball)
+                self.rod_level()
+                self.mk.push("pivot_rod", force=(0.0, 0.0, P.ROD_MASS * P.GRAVITY))
+            if load is not None:
+                load(self.t)
+            self.res = self.emb.step(act)
+            self.t += 1.0 / hz
+            r = self.reading()
+            for k, v in r["forces_N"].items():
+                self.peaks[k] = max(self.peaks[k], v)
+            if i % every == 0:
+                self.rows.append(r)
+            if until is not None and until():
+                self.rows.append(r)
+                break
+        return self.reading()
+
+    def out(self, **kw) -> dict:
+        return {**kw, "events": self.m.STATE.get("events", []), "catch": self.m.STATE.get("catch"),
+                "peak_forces_N": {k: round(v, 2) for k, v in self.peaks.items()}, "end": self.reading(), "rows": self.rows}
 
 
-def _save_start_views(obs, out_dir: Path) -> None:
+def press_nut(trial: Trial, along: float = -PRESS_ON):
+    """A hand's push on the nut toward the drain, carrying its weight (until the thread holds it)."""
+    def load(_t: float) -> None:
+        trial.mk.push("pivot_nut", force=(along, 0.0, P.NUT_MASS * P.GRAVITY))
+    return load
+
+
+def caught_at_start(emb, name: str) -> tuple[Trial, dict]:
+    tr = Trial(emb, name)
+    tr.rod_level()
+    tr.nut_on_start(-0.00005)
+    first = tr.step(0.05, load=press_nut(tr))
+    return tr, {"first_step": first, "set_at_land_gap_mm": -0.05}
+
+
+def trial_catch_where_it_stands(emb) -> dict:
+    """Set square on the start, pressed 0.05 mm onto the washer: the thread catches at the first step, the nut does not
+    move for it, and it stays caught with no load (0.25: the rod is in the port, the nut not snug)."""
+    tr, info = caught_at_start(emb, "catch_where_it_stands")
+    c = tr.m.STATE.get("catch") or {}
+    after_catch = tr.step(1.0, load=lambda _t: tr.mk.push("pivot_nut"))
+    ok = (info["first_step"]["engaged"] and abs(c.get("land_gap_mm", 9.0) + 0.05) <= 0.1 and after_catch["engaged"]
+          and abs(after_catch["cw_deg"] - c.get("cw_deg", 99.0)) <= 3.0 and after_catch["score"] == 0.25)
+    return tr.out(pass_=bool(ok), **info)
+
+
+def trial_crooked_never_catches(emb) -> dict:
+    """Held on the start and pressed on, but 3 deg and then 2 deg out of square: the thread never catches."""
+    tr = Trial(emb, "crooked_never_catches")
+    tr.rod_level()
+    for tilt in (3.0, 2.0):
+        def load(_t: float, tilt=tilt) -> None:
+            tr.nut_on_start(-0.00005, tilt)
+            press_nut(tr)(_t)
+        tr.step(1.0, load=load)
+    engaged_ever = any(r["engaged"] for r in tr.rows)
+    return tr.out(pass_=bool(not engaged_ever and tr.reading()["score"] == 0.25))
+
+
+def trial_turn_back_off_the_start(emb) -> dict:
+    """Caught at the start, then turned back (0.06 N m the loosening way): the thread lets go at 3 deg back past the
+    start; the nut stays on the rod behind the ball."""
+    tr, info = caught_at_start(emb, "turn_back_off_the_start")
+    tr.step(2.0, load=lambda _t: tr.mk.push("pivot_nut", torque=(0.06, 0.0, 0.0)), until=lambda: not tr.m.thread_engaged())
+    released = not tr.m.thread_engaged()
+    tr.step(0.5, load=lambda _t: tr.mk.push("pivot_nut"))
+    ok = info["first_step"]["engaged"] and released and tr.m.STATE.get("zero") is None
+    return tr.out(pass_=bool(ok), **info)
+
+
+def turn_to_snug(tr: Trial) -> dict:
+    """A turning-on torque on the nut that rises 0.15 N m/s from 0.02 N m (at most 0.40 N m) until the thread stops;
+    returns the torque when it passed 340 deg (snug) and when it reached the stop."""
+    seen: dict = {}
+
+    def load(t: float) -> None:
+        tau = min(0.02 + 0.15 * (t - t0), 0.40)
+        cw = tr.m.thread_cw_deg()
+        if cw >= P.STOP_DEG - P.SNUG_DEG and "snug_at_Nm" not in seen:
+            seen["snug_at_Nm"] = round(tau, 3)
+        if cw >= P.STOP_DEG - 2.0 and "stop_at_Nm" not in seen:
+            seen["stop_at_Nm"] = round(tau, 3)
+        tr.mk.push("pivot_nut", torque=(-tau, 0.0, 0.0))
+
+    t0 = tr.t
+    tr.step(4.0, load=load, until=lambda: "stop_at_Nm" in seen)
+    tr.step(1.0, load=lambda _t: tr.mk.push("pivot_nut"))
+    seen["nut_rod_force_at_snug_N"] = tr.reading()["forces_N"]["nut_rod"]
+    return seen
+
+
+def trial_turned_on_snug(emb) -> dict:
+    """Caught at the start and turned on by a rising torque to the thread's stop: snug, 0.5 (stopper still closed)."""
+    tr, info = caught_at_start(emb, "turned_on_snug")
+    torque = turn_to_snug(tr)
+    end = tr.reading()
+    ok = end["engaged"] and end["cw_deg"] >= P.STOP_DEG - P.SNUG_DEG and end["score"] == 0.5
+    return tr.out(pass_=bool(ok), torque=torque, **info)
+
+
+def trial_pressed_open_and_let_go(emb) -> dict:
+    """Snug, then the rod's rear pressed down (a torque rising 0.2 N m/s from 0.05 N m, as a hand on the clevis) until
+    the rod is 20 deg down, then let go: the washer's friction on the ball holds it; the stopper's lift is read over
+    30 s. 1.0 once held still for 1 s with the hands (at ready) clear."""
+    tr, info = caught_at_start(emb, "pressed_open_and_let_go")
+    torque = turn_to_snug(tr)
+    tr.hold_rod = False
+    t0 = tr.t
+    tr.step(4.0, load=lambda t: tr.mk.push("pivot_rod", torque=(0.0, min(0.05 + 0.2 * (t - t0), 0.6), 0.0)),
+            until=lambda: tr.m.rod_pitch_deg() >= 20.0)
+    pressed = tr.reading()
+    marks, drift = {}, []
+    t_let = tr.t
+    for upto in (1.0, 5.0, 10.0, 20.0, 30.0):
+        tr.step(upto - (tr.t - t_let), load=lambda _t: tr.mk.push("pivot_rod"), every=20)
+        r = tr.reading()
+        marks[f"{upto:.0f}s"] = {"gap_mm": r["gap_mm"], "pitch_deg": r["pitch_deg"], "score": r["score"]}
+        drift.append(r["gap_mm"])
+    end = tr.reading()
+    ok = (pressed["pitch_deg"] >= 19.5 and end["score"] == 1.0 and P.GAP_OPEN_MIN * 1000.0 <= end["gap_mm"] <= P.GAP_OPEN_MAX * 1000.0
+          and max(drift) - min(drift) <= 1.0)
+    return tr.out(pass_=bool(ok), torque=torque, pressed=pressed, after_let_go=marks, **info)
+
+
+def trial_start(emb, out: Path) -> dict:
+    """The start as reset: the three cameras' pictures, and 2 s at ready: the stopper, rod and nut settle within 2.5 mm
+    of where they were built, nothing scores, nothing falls."""
     import cv2
+    from inspect_robots import Scene
 
-    out_dir.mkdir(parents=True, exist_ok=True)
+    m = emb.task.module
+    obs = emb.reset(Scene(id="start", instruction=m.INSTRUCTION), seed=0)
     for cam, stem in (("top_cam", "start_top"), ("left_cam", "start_left_wrist"), ("right_cam", "start_right_wrist")):
         bgr = cv2.cvtColor(np.asarray(obs.images[cam]), cv2.COLOR_RGB2BGR)
-        cv2.imwrite(str(out_dir / f"{stem}.png"), bgr)
-        cv2.imwrite(str(out_dir / f"{stem}_policy.png"), cv2.resize(bgr, (320, 176), interpolation=cv2.INTER_AREA))
-
-
-def _step_idle(embodiment, m, seconds: float) -> dict:
-    hz = float(embodiment.info.control_hz)
-    act = _ready_action()
-    samples = []
+        cv2.imwrite(str(out / f"{stem}.png"), bgr)
+        cv2.imwrite(str(out / f"{stem}_policy.png"), cv2.resize(bgr, (320, 176), interpolation=cv2.INTER_AREA))
     res = None
-    for i in range(int(round(seconds * hz))):
-        res = embodiment.step(act)
-        if (i + 1) % 5 == 0:
-            samples.append({"t": round((i + 1) / hz, 2), **m.report()})
-    assert res is not None
-    return {"end_score": float(res.info.get("score", 0.0)), "report": m.report(), "samples": samples}
+    for _ in range(40):
+        res = emb.step(ready_action())
+    moved = {n: round(1000.0 * float(np.linalg.norm(m.mk.pose(n)[0] - np.asarray(m.mk.built_pose(n)[0]))), 2)
+             for n in ("stopper", "pivot_rod", "pivot_nut")}
+    score = float(res.info.get("score", 0.0)) if res is not None else None
+    ok = score == 0.0 and m.STATE.get("zero") is None and max(moved.values()) <= 2.5 and not m.thread_engaged()
+    return {"pass_": bool(ok), "moved_from_built_mm": moved, "score_after_2s": score, "nut_front_u_mm": round(1000.0 * m.nut_front_u(), 2),
+            "nut_tilt_deg": round(m.nut_tilt_deg(), 2)}
 
 
-def trial_blocked_closed(embodiment, m, out_dir: Path) -> dict:
-    """Right arm pushes the rod forward while the stopper rests closed & unrotated: stem blocks tip >= 12 mm short (0.0)."""
-    import demo_kit as kit
-
-    Move = kit.Move
-    w = K.poses()
-    gc = K.RIGHT_GRAV_COMP
-    r_on = w["right: on retracted rod"][1]
-    r_push = K.rod_grip_world(P.X_SEAT - 0.020, 0.0) + gc
-    r_pre = w["right: pre-grasp rod"][1]
-    moves = {
-        "right": [
-            Move(1.2, pos=w["right: front pull-back"][1], rot=K.RIGHT_FRONT_ROT, grip=K.RIGHT_OPEN_JAW / K.MAX_JAW, label="front"),
-            Move(1.3, pos=w["right: outside doorway"][1], rot=K.RIGHT_DOOR_ROT, label="door"),
-            Move(1.3, pos=w["right: bypass pipe"][1], rot=K.RIGHT_BYPASS_ROT, label="bypass"),
-            Move(1.2, pos=r_pre, rot=K.RIGHT_ROT, label="pre"),
-            Move(1.1, pos=r_on, label="on_rod"),
-            Move(0.7, grip=0.004 / K.MAX_JAW, label="pinch"),
-            Move(1.8, pos=r_push, push=(-25.0, 0.0, 0.0), label="push_blocked"),
-            Move(0.6, grip=K.RIGHT_OPEN_JAW / K.MAX_JAW, push=(0.0, 0.0, 0.0), label="release"),
-            Move(1.0, pos=r_pre, label="back"),
-            Move(1.2, pos=w["right: bypass pipe"][1], rot=K.RIGHT_BYPASS_ROT, label="bypass_out"),
-        ]
-    }
-    res = kit.run(
-        embodiment,
-        moves,
-        out_dir / "blocked_closed",
-        seed=0,
-        tail_s=1.0,
-        limit_s=15.0,
-        record=False,
-        extra=lambda: {
-            "mark_mm": round(1000.0 * m.collar_mark_gap(), 2),
-            "f_rod_stop": round(m.mk.contact_force("pivot_rod", "stopper"), 2),
-        },
-    )
-    min_mark = min(r["extra"]["mark_mm"] for r in res["rows"])
-    peak_contact = max(r["extra"]["f_rod_stop"] for r in res["rows"])
-    end_score = float(res["rows"][-1]["info"].get("score", 0.0))
-    ok = min_mark >= 10.0 and peak_contact >= 0.5 and end_score == 0.0
-    return {"pass": ok, "min_collar_mark_mm": min_mark, "peak_rod_stopper_force_N": peak_contact, "end_score": end_score, "report": res.get("report")}
-
-
-def trial_lift_inspect_recover(embodiment, _m) -> dict:
-    """Lifting stopper 64 mm up to inspect eye scores 0.0 while out, does NOT latch a foul, and recovers to 1.0 when coupled."""
-    from inspect_robots import Scene
-
-    m = embodiment.task.module
-    embodiment.reset(Scene(id="inspect_recover", instruction=m.INSTRUCTION), seed=0)
-    m.mk.write_pose("stopper", (P.X_DRAIN, P.Y_DRAIN, m.TOP + P.FLANGE_Z + 0.064), (0.0, 0.0, 0.0, 1.0))
-    r_while_out = embodiment.step(_ready_action())
-    score_while_out = float(r_while_out.info.get("score", 0.0))
-    # Reinsert onto seated 17.5 deg tilted rod: since pull-out is unlatched, end state recovers to 1.0
-    th = math.radians(17.5)
-    m.mk.write_pose("pivot_rod", (P.X_SEAT, P.Y_DRAIN, m.TOP + P.PORT_Z), _quat(m, m.mk.axis_angle((0.0, 1.0, 0.0), th)))
-    m.mk.write_pose("stopper", (P.X_DRAIN, P.Y_DRAIN, m.TOP + P.FLANGE_Z + 0.0115), (0.0, 0.0, 0.0, 1.0))
-    out = _step_idle(embodiment, m, 2.5)
-    out["score_while_lifted_out"] = score_while_out
-    out["pass"] = score_while_out == 0.0 and out["end_score"] == 1.0 and out["report"]["zero"] is None
-    return out
-
-
-def trial_foul_rod_drop(embodiment, _m) -> dict:
-    from inspect_robots import Scene
-
-    m = embodiment.task.module
-    embodiment.reset(Scene(id="foul_rod", instruction=m.INSTRUCTION), seed=0)
-    m.mk.write_pose("pivot_rod", (0.440, P.Y_DRAIN - 0.035, m.TOP + 0.012), (0.0, 0.0, 0.0, 1.0))
-    out = _step_idle(embodiment, m, 1.2)
-    out["pass"] = out["end_score"] == 0.0 and out["report"]["zero"] == "pivot rod dropped onto cabinet floor"
-    return out
-
-
-def trial_seated_half(embodiment, _m, start_img_dir: Path | None = None) -> dict:
-    """Ball seated horizontally through aligned eye without downward press -> settles at ~3.5 mm (< 8 mm) -> 0.5."""
-    from inspect_robots import Scene
-
-    m = embodiment.task.module
-    obs = embodiment.reset(Scene(id="half", instruction=m.INSTRUCTION), seed=0)
-    if start_img_dir is not None:
-        _save_start_views(obs, start_img_dir)
-    m.mk.write_pose("stopper", (P.X_DRAIN, P.Y_DRAIN, m.TOP + P.FLANGE_Z + 0.0055), (0.0, 0.0, 0.0, 1.0))
-    m.mk.write_pose("pivot_rod", (P.X_SEAT, P.Y_DRAIN, m.TOP + P.PORT_Z), (0.0, 0.0, 0.0, 1.0))
-    out = _step_idle(embodiment, m, 2.0)
-    gap_mm = out["report"]["stopper gap (mm)"]
-    f_rd = out["report"]["forces rod-drain, rod-stopper, stopper-drain (N)"][0]
-    out["pass"] = out["end_score"] == 0.5 and 1.5 <= gap_mm < 8.0 and f_rd >= 3.0
-    return out
-
-
-def trial_pressed_open_full(embodiment, _m) -> dict:
-    """Ball seated and rear rod tilted down 17.5 deg: pure 240 Hz PhysX cone-washer friction holds stopper open -> 1.0."""
-    from inspect_robots import Scene
-
-    m = embodiment.task.module
-    embodiment.reset(Scene(id="full", instruction=m.INSTRUCTION), seed=0)
-    th = math.radians(17.5)
-    m.mk.write_pose("pivot_rod", (P.X_SEAT, P.Y_DRAIN, m.TOP + P.PORT_Z), _quat(m, m.mk.axis_angle((0.0, 1.0, 0.0), th)))
-    m.mk.write_pose("stopper", (P.X_DRAIN, P.Y_DRAIN, m.TOP + P.FLANGE_Z + 0.0115), (0.0, 0.0, 0.0, 1.0))
-    out = _step_idle(embodiment, m, 2.5)
-    gap_mm = out["report"]["stopper gap (mm)"]
-    forces = out["report"]["forces rod-drain, rod-stopper, stopper-drain (N)"]
-    out["pass"] = out["end_score"] == 1.0 and 8.0 <= gap_mm <= 22.0 and forces[0] >= 1.5 and forces[1] >= 0.2
-    return out
+def trial_falls(emb) -> dict:
+    """The nut, then (fresh) the rod's ball, put on the bench: 0 for the whole trial."""
+    res = {}
+    for name, pos in (("pivot_nut", (0.36, 0.10, None)), ("pivot_rod", (0.38, 0.08, None))):
+        tr = Trial(emb, f"fall_{name}")
+        tr.hold_rod = name == "pivot_nut"
+        tr.seat(name, (pos[0], pos[1], tr.m.TOP + 0.016))
+        tr.step(1.0)
+        zero = tr.m.STATE.get("zero")
+        res[name] = {"zero": zero, "end_score": tr.reading()["score"]}
+    ok = all(v["zero"] is not None and v["end_score"] == 0.0 for v in res.values())
+    return {"pass_": bool(ok), **res}
 
 
 def main() -> int:
@@ -169,20 +244,21 @@ def main() -> int:
     out = Path(sys.argv[1])
     out.mkdir(parents=True, exist_ok=True)
     emb = kit.open_task(HERE / "task.py")
-    m = emb.task.module
-
-    results = {
-        "seated_half": trial_seated_half(emb, m, start_img_dir=out / "start_views"),
-        "pressed_open_full": trial_pressed_open_full(emb, m),
-        "lift_inspect_recover": trial_lift_inspect_recover(emb, m),
-        "foul_rod_drop": trial_foul_rod_drop(emb, m),
-        "blocked_closed": trial_blocked_closed(emb, m, out),
+    trials = {
+        "start": lambda e: trial_start(e, out),
+        "catch_where_it_stands": trial_catch_where_it_stands,
+        "crooked_never_catches": trial_crooked_never_catches,
+        "turn_back_off_the_start": trial_turn_back_off_the_start,
+        "turned_on_snug": trial_turned_on_snug,
+        "pressed_open_and_let_go": trial_pressed_open_and_let_go,
+        "falls": trial_falls,
     }
     ok = True
-    for name, res in results.items():
+    for name, fn in trials.items():
+        res = fn(emb)
+        res["pass"] = res.pop("pass_")
         (out / f"{name}.json").write_text(json.dumps(res, indent=1, default=str))
-        brief = {k: v for k, v in res.items() if k != "samples"}
-        print(f"TRIAL {name} " + json.dumps(brief, default=str), flush=True)
+        print(f"TRIAL {name} " + json.dumps({k: v for k, v in res.items() if k != "rows"}, default=str), flush=True)
         ok &= bool(res["pass"])
     return 0 if ok else 1
 
