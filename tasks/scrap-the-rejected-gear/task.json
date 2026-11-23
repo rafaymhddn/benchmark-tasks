@@ -1,0 +1,19 @@
+{
+  "title": "Scrap the gear the inspector rejected and refill the pocket it came from",
+  "category": "Impact on AI timelines",
+  "keywords": [
+    "memory",
+    "identical parts",
+    "inspection",
+    "kitting"
+  ],
+  "instruction": "The inspector put a defective gear back into the tray. Move it to the scrap bin, then put the spare gear in the pocket it came out of.",
+  "context": "Robot-building kitting: an inspector pulls one part, marks it bad by moving it, and the kitting robot must scrap exactly that part and refill the pocket it came from, among identical parts and two empty pockets.",
+  "setup": "On a wooden bench in front of two arms mounted 61 cm apart: a grey plastic parts tray (fixed) with two rows of four shallow square pockets (7 cm, 1.5 cm deep, 6 mm walls) 17 cm and 25 cm in front of the arm bases at 4 cm and 12 cm left and right of the centre line, holding seven identical steel gears (3.4 cm diameter, 6 cm tall, 90 g) with one pocket empty (random); a red open scrap bin (9 x 9 cm, 6 cm walls) 8 cm out on the centre line; a spare gear standing on a dark pad (7 x 7 cm) 34 cm out on the centre line, beyond the tray. During the first 6 s, while the arms are held still, the inspector lifts one gear (cycles through the seven) 25 cm straight up from its pocket (1 to 1.8 s), holds it for 2 s, and sets it down in the empty pocket (by 5.5 s). The robot is commanded from 6 s.",
+  "scoring": "0.25 when the rejected gear is lifted 5 cm (after the observation phase); 0.25 when it rests inside the scrap bin; 0.5 when the spare stands still in the pocket the rejected gear came from (centre within 2 cm, bottom within 1 cm of the pocket floor, tilt under 10 degrees); success (1.0) when the gear is in the bin and the spare is seated for 1 s. The episode ends with the score so far if any other gear is lifted 3 cm, if the spare is set down in the other empty pocket, or if a gear falls off the bench.",
+  "run_limit": "1200 steps (60 seconds at 20 Hz), including the 6 s observation phase during which actions are ignored",
+  "reset_notes": "Put seven gears in the tray leaving one pocket empty, the spare on its pad, the bin empty; pick the next gear to reject and move it as described.",
+  "fidelity": "Approximate: gears are plain steel cylinders; the inspector's move is a scripted lift, hold and place.",
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-LSWEGC"
+}
