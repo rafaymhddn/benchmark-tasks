@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Reach, joint margins, clearances and loads of every pose the demo uses, without the simulator; and the start picture.
+"""Reach, joint margins and clearances of every pose the demo uses, without the simulator; and the start picture.
 
-1. Offline: each waypoint of both arms solved with ``yam_arena.ik`` (<= 0.5 mm, <= 0.6 deg, every joint >= 5 deg inside
-   its limits); the hands' collision hulls against the bench, the deck, the seat (at the pose's angle) and the pan;
-   the hands apart where they work together; the seat's weight on the holding hand as joint torques (J^T F) against
-   the drives' limits; the carried pan's wings under the raised seat and its outer finger inside the opening.
+1. Offline: each waypoint of the right arm solved with ``yam_arena.ik`` (<= 0.5 mm, <= 0.6 deg, every joint >= 5 deg
+   inside its limits); the arm's collision hulls (wrist to fingertips, and the forearm links) against the bench, the
+   bowl (rim, inside, stand, wall), the raised seat and the pan; both arms' ready poses against the same; the carried
+   pan's boxes against the bowl, the seat and the bench along its whole path; where the raised seat stands from the
+   arm bases.
 2. ``--frame0 <dir>`` in the simulator: the start pictures (top camera at 320 x 176 as the policy sees it) and 2.0 s
    idle: nothing moves, the score stays 0.
 
@@ -31,25 +32,19 @@ import parts as P  # noqa: E402
 TOP = TABLE_TOP["station"]
 BASES = {side: np.array(station.BASES[side], dtype=float) for side in ("left", "right")}
 HAND_LINKS = ("link4", "link5", "gripper", "tip_left", "tip_right")
+ARM_LINKS = ("link2", "link3") + HAND_LINKS
 FINGER_LINKS = ("tip_left", "tip_right")
 MAX_JAW = 2.0 * abs(float(C.FINGER_OPEN))  # 0.0939 m
 IK_MM, IK_DEG, MARGIN_DEG = 0.5, 0.6, 5.0
 
-# The left hand holds the seat's near side arm (x < its middle line) from above, the fingers closing across the arm's
-# 83.4 mm width (the inner finger in the opening, the outer one beyond the narrow deck); it turns with the seat.
-SEAT_GRIP_D = 0.170  # m from the hinge line along the seat
-SEAT_LEAN_DEG = 20.0  # the hand leans this far about its closing axis, its wrist towards the hinge
-SEAT_FLIP = True  # the closing axis points outwards (the IK reaches it with wide joint margins)
-SEAT_HOLD_DEG = 42.0  # the seat is held up at this angle while the pan goes under it
-SEAT_REST_DEG = 0.6  # where the seat rests on the pan's 4 mm wings
-SEAT_ARM_W = (P.SEAT_W - P.SEAT_IN_W) / 2.0  # 83.4 mm across the side arm
-
-# The right hand pinches the middle of the pan's front wall from above, the inner finger inside the bowl.
+# The right hand pinches the pan's front wall from above, 35 mm from its middle, the inner finger inside the bowl.
 PAN_GRIP_Z = P.PAN_H - 0.012  # grasp point 12 mm under the rim
-PAN_GRIP_ALONG = -0.035  # m along the wall from its middle: the leaning wrist then rises through the seat's open front
-CARRY_LOW = 0.127  # m: the pan's bottom over the bench while carried (12 mm over the rim)
-PAN_LEAN_DEG = 30.0  # the right hand leans along the wall (its wrist towards the robot)
-PAN_LET_GO = 0.016  # m the fingers open to round the 4 mm wall when they let go (the outer one stays off the rim)
+PAN_GRIP_ALONG = 0.035  # m along the wall from its middle (left of it once the pan is across)
+PAN_LEAN_DEG = 45.0  # the hand leans about its closing axis: fingertips to the bowl's left, wrist to the right arm
+PAN_FLIP = True  # the closing axis points into the pan (False: out of it, a half turn of the wrist the arm cannot make)
+CARRY_LOW = P.RIM_Z + 0.012  # m: the pan's bottom over the bench while carried (12 mm over the rim)
+PAN_LET_GO = 0.016  # m the fingers open to round the 4 mm wall when they let go
+BACK = np.array([-0.060, -0.060, 0.040])  # m the hand draws back after letting go, before its ready pose
 
 
 def frame(closing, approach) -> np.ndarray:
@@ -60,30 +55,6 @@ def frame(closing, approach) -> np.ndarray:
     return np.column_stack([c, np.cross(a, c), a])
 
 
-def left_on_seat(deg: float, up: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
-    """The left grasp point and rotation on the seat raised by ``deg``; ``up`` m drawn back along the fingers."""
-    lean = math.radians(SEAT_LEAN_DEG)
-    closing = (-1.0 if SEAT_FLIP else 1.0, 0.0, 0.0)
-    approach = (0.0, -math.sin(lean), -math.cos(lean))  # down the seat's normal, leaned towards the hinge (+y_s is back)
-    rot = P.seat_rot(deg) @ frame(closing, approach)
-    x_mid = -(P.SEAT_IN_W + P.SEAT_W) / 4.0
-    pos = P.seat_point(TOP, x_mid, SEAT_GRIP_D, P.RING_MID, deg) - up * rot[:, 2]
-    return pos, rot
-
-
-def seat_normal(deg: float) -> np.ndarray:
-    return P.seat_rot(deg) @ np.array([0.0, 0.0, 1.0])
-
-
-def seat_lift(deg: float) -> float:
-    """N the hand lifts with, along the seat's normal at the grasp, to hold the seat at ``deg``."""
-    return P.seat_torque(deg) / SEAT_GRIP_D
-
-
-def pan_origin(xy, bottom: float) -> np.ndarray:
-    return np.array([xy[0], xy[1], TOP + bottom])
-
-
 def turn(axis, deg: float) -> np.ndarray:
     """Rotation by ``deg`` about ``axis`` (Rodrigues)."""
     k = np.asarray(axis, float) / np.linalg.norm(axis)
@@ -92,53 +63,69 @@ def turn(axis, deg: float) -> np.ndarray:
     return np.eye(3) + math.sin(a) * kx + (1.0 - math.cos(a)) * kx @ kx
 
 
+def pan_origin(xy, bottom: float) -> np.ndarray:
+    return np.array([xy[0], xy[1], TOP + bottom])
+
+
+def grip_local() -> np.ndarray:
+    return np.array([-(P.PAN_CHORD / 2.0 - P.PAN_WALL / 2.0), PAN_GRIP_ALONG, PAN_GRIP_Z])
+
+
 def right_on_pan(origin: np.ndarray, yaw_deg: float, up: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
     """The right grasp point and rotation on the pan whose frame is at ``origin`` turned ``yaw_deg``: the fingers
-    close across the front wall (the pan's -x side) 35 mm from its middle, the hand pointing down and leaned 30 deg
-    along the wall; ``up`` m straight up from there."""
+    close across the front wall (the pan's -x side), the hand pointing down and leaned about its closing axis; ``up``
+    m straight up from there."""
     r = P.rz(yaw_deg)
-    local = np.array([-(P.PAN_CHORD / 2.0 - P.PAN_WALL / 2.0), PAN_GRIP_ALONG, PAN_GRIP_Z])
-    rot = frame(-r[:, 0], (0.0, 0.0, -1.0))
+    rot = frame((1.0 if PAN_FLIP else -1.0) * r[:, 0], (0.0, 0.0, -1.0))
     rot = turn(rot[:, 0], PAN_LEAN_DEG) @ rot
-    return np.asarray(origin, float) + r @ local + np.array([0.0, 0.0, up]), rot
+    return np.asarray(origin, float) + r @ grip_local() + np.array([0.0, 0.0, up]), rot
 
 
-PAN_PLACE_XY = (P.HOLE_X, P.PINTLE_Y - P.PAN_PLACE_D)
-PAN_SEATED_BOTTOM = P.RIM_Z - (P.PAN_H - P.WING_T)  # 0.019 m: the wings on the rim
+def ready_pose(side: str) -> tuple[np.ndarray, np.ndarray]:
+    return ik.tcp_pose(np.array(READY, dtype=float), BASES[side])
+
+
+PAN_PLACE_XY = (P.BOLT_X - P.PAN_PLACE_D, P.BOWL_Y)
+PAN_SEATED_BOTTOM = P.RIM_Z - (P.PAN_H - P.WING_T)  # 0.064 m: the wings on the rim
 
 
 def pan_path() -> list[tuple[str, np.ndarray, float]]:
-    """The carried pan's frame (origin, yaw) at the demo's waypoints."""
-    sx, sy = P.PAN_START
-    px, py = PAN_PLACE_XY
+    """The carried pan's frame (origin, yaw) at the demo's waypoints: lifted, turned half way about the grasp (the hand
+    turns its wrist), turned on while carried towards the bowl, over the opening, lowered until the wings rest on the
+    rim. (The arm cannot finish the turn beside the start: there the across grasp is out of its wrist's range.)"""
+    y0, y1 = P.PAN_START_YAW_DEG, P.PAN_PLACE_YAW_DEG
+    lifted = pan_origin(P.PAN_START, CARRY_LOW)
+    grasp = lifted + P.rz(y0) @ grip_local()
+    over = pan_origin(PAN_PLACE_XY, CARRY_LOW)
+    y_half, y_late = (y0 + y1) / 2.0, y1 + (y0 - y1) / 4.0
+    g_over = over + P.rz(y1) @ grip_local()
+    g_late = np.array([g_over[0], (grasp[1] + g_over[1]) / 2.0, g_over[2]])  # the turning pan kept clear of the seat
     return [
-        ("lifted", pan_origin((sx, sy), CARRY_LOW), 0.0),
-        ("turning", pan_origin((sx + 0.005, sy + 0.020), CARRY_LOW), 45.0),
-        ("turned", pan_origin((px, sy + 0.040), CARRY_LOW), 90.0),
-        ("over the opening", pan_origin((px, py), CARRY_LOW), 90.0),
-        ("wings on the rim", pan_origin((px, py), PAN_SEATED_BOTTOM), 90.0),
+        ("lifted", lifted, y0),
+        ("turning", grasp - P.rz(y_half) @ grip_local(), y_half),
+        ("turned", g_late - P.rz(y_late) @ grip_local(), y_late),
+        ("over the opening", over, y1),
+        ("wings on the rim", pan_origin(PAN_PLACE_XY, PAN_SEATED_BOTTOM), y1),
     ]
 
 
 def poses() -> dict[str, tuple]:
-    """name -> (side, grasp point, rotation, finger opening (m), seat angle (deg), body held or None, pan origin, pan yaw)."""
-    start = pan_origin(P.PAN_START, 0.0)
-    _, seated, seated_yaw = pan_path()[-1]
-    out = {"l: outside the ring": ("left", *left_on_seat(0.0, up=0.040), MAX_JAW, 0.0, None, start, P.PAN_START_YAW_DEG)}
-    for name, deg in (("l: seat at 0 deg", 0.0), ("l: seat at 20 deg", 20.0), ("l: seat held up", SEAT_HOLD_DEG)):
-        out[name] = ("left", *left_on_seat(deg), SEAT_ARM_W, deg, "toilet_seat", start, P.PAN_START_YAW_DEG)
-    out["l: let go on the wings"] = ("left", *left_on_seat(SEAT_REST_DEG), MAX_JAW, SEAT_REST_DEG, "toilet_seat", seated, seated_yaw)
-    out["l: drawn out"] = ("left", *left_on_seat(SEAT_REST_DEG, up=0.040), MAX_JAW, SEAT_REST_DEG, None, seated, seated_yaw)
-    out["r: over the wall"] = ("right", *right_on_pan(start, P.PAN_START_YAW_DEG, up=0.040), 0.050, 0.0, None, start, P.PAN_START_YAW_DEG)
-    out["r: on the wall"] = ("right", *right_on_pan(start, P.PAN_START_YAW_DEG), P.PAN_WALL, 0.0, "specimen_pan", start, P.PAN_START_YAW_DEG)
-    for name, origin, yaw in pan_path():
-        out[f"r: pan {name}"] = ("right", *right_on_pan(origin, yaw), P.PAN_WALL, SEAT_HOLD_DEG, "specimen_pan", origin, yaw)
-    out["r: let go of the wall"] = ("right", *right_on_pan(seated, seated_yaw), PAN_LET_GO, SEAT_HOLD_DEG, "specimen_pan", seated, seated_yaw)
-    out["r: up from the wall"] = ("right", *right_on_pan(seated, seated_yaw, up=0.050), PAN_LET_GO, SEAT_HOLD_DEG, None, seated, seated_yaw)
+    """name -> (side, grasp point, rotation, finger opening (m), body held or None, pan origin, pan yaw)."""
+    start, y0 = pan_origin(P.PAN_START, 0.0), P.PAN_START_YAW_DEG
+    path = pan_path()
+    _, seated, ys = path[-1]
+    out = {"r: over the wall": ("right", *right_on_pan(start, y0, up=0.040), 0.050, None, start, y0),
+           "r: on the wall": ("right", *right_on_pan(start, y0), P.PAN_WALL, "specimen_pan", start, y0)}  # fmt: skip
+    for name, origin, yaw in path:
+        out[f"r: pan {name}"] = ("right", *right_on_pan(origin, yaw), P.PAN_WALL, "specimen_pan", origin, yaw)
+    out["r: let go of the wall"] = ("right", *right_on_pan(seated, ys), PAN_LET_GO, "specimen_pan", seated, ys)
+    up, rot = right_on_pan(seated, ys, up=0.050)
+    out["r: up from the wall"] = ("right", up, rot, PAN_LET_GO, None, seated, ys)
+    out["r: back"] = ("right", up + BACK, rot, PAN_LET_GO, None, seated, ys)
+    for side in ("left", "right"):
+        out[f"{side[0]}: ready, start"] = (side, *ready_pose(side), MAX_JAW, None, start, y0)
+        out[f"{side[0]}: ready, end"] = (side, *ready_pose(side), MAX_JAW, None, seated, ys)
     return out
-
-
-TOGETHER = [("l: seat held up", f"r: pan {name}") for name, _, _ in pan_path()] + [("l: seat held up", "r: up from the wall")]
 
 
 def solve_pose(side: str, pos: np.ndarray, rot: np.ndarray, seed=None) -> tuple[np.ndarray, float, float, float]:
@@ -158,7 +145,7 @@ def solve_pose(side: str, pos: np.ndarray, rot: np.ndarray, seed=None) -> tuple[
     return best[1], best[2], best[3], best[4]
 
 
-def hand_hulls(side: str, q: np.ndarray, opening: float, links=HAND_LINKS) -> list:
+def hand_hulls(side: str, q: np.ndarray, opening: float, links=ARM_LINKS) -> list:
     half = -0.5 * max(0.0, min(MAX_JAW, opening))
     joints = {**{n: float(v) for n, v in zip(C.ARM_JOINTS, q)}, **dict.fromkeys(C.FINGER_JOINTS, half)}
     poses_w = analysis.fk_link_poses_world(joints, tuple(BASES[side]))
@@ -190,63 +177,66 @@ def gap(hulls_a, hulls_b) -> float:
     return best
 
 
-def scene_hulls(seat_deg: float, pan_origin_: np.ndarray, pan_yaw: float) -> dict[str, list]:
+def scene_hulls(pan_origin_: np.ndarray, pan_yaw: float, seat_deg: float = P.CHECK_HINGE_DEG) -> dict[str, list]:
     import scene as S
 
     bench = [("bench", box_hull((0.36, 0.0, TOP - 0.03), np.eye(3), (1.1, 1.3, 0.06)))]
-    deck_o = np.array([P.HOLE_X, P.PINTLE_Y, TOP])
-    deck = [("deck", box_hull(deck_o + np.array(c), np.eye(3), s)) for c, s, _ in S.deck_boxes()]
-    pin = np.array([P.HOLE_X, P.PINTLE_Y, TOP + P.PINTLE_Z])
-    rs = P.seat_rot(seat_deg)
-    seat = [("seat", box_hull(pin + rs @ np.array(c), rs, s)) for c, s in P.seat_boxes() + P.bumper_boxes()]
+    bowl = [(kind, box_hull((c[0], c[1], TOP + c[2]), np.eye(3), s)) for c, s, kind in P.bowl_boxes()]
+    rs = P.seat_world_rot(seat_deg)
+    seat = [("seat", box_hull(P.pin(TOP) + rs @ np.array(c), rs, s)) for c, s in P.seat_boxes() + P.bumper_boxes()]
     rp = P.rz(pan_yaw)
     pan = [("pan", box_hull(pan_origin_ + rp @ np.array(c), rp, s)) for c, s in S.pan_boxes()]
-    return {"bench": bench, "deck": deck, "seat": seat, "pan": pan}
+    return {"bench": bench, "bowl": bowl, "seat": seat, "pan": pan}
+
+
+def pan_sweep() -> dict:
+    """The carried pan's boxes against the bowl, the seat and the bench between the waypoints (the hand moves its
+    grasp in a straight line and turns about the vertical; the pan turns with it). The last stretch, lowering onto the
+    rim, ends with the wings on it: sampled to 90 %."""
+    path = pan_path()
+    out = {}
+    for (n0, o0, y0), (n1, o1, y1) in zip(path, path[1:]):
+        g0, g1 = o0 + P.rz(y0) @ grip_local(), o1 + P.rz(y1) @ grip_local()
+        worst = {}
+        for t in (0.0, 0.25, 0.5, 0.75, 0.9) if n1 == "wings on the rim" else (0.0, 0.2, 0.4, 0.6, 0.8, 1.0):
+            yaw = y0 + t * (y1 - y0)
+            f = scene_hulls(g0 + t * (g1 - g0) - P.rz(yaw) @ grip_local(), yaw)
+            for k in ("bowl", "seat", "bench"):
+                worst[k] = min(worst.get(k, math.inf), round(1000.0 * gap(f["pan"], f[k]), 1))
+        out[f"{n0} -> {n1}"] = worst
+    return out
+
+
+def seat_reach() -> dict:
+    """Where the raised seat stands: its nearest corner to each arm base (along the bench) and its corners' heights."""
+    rs = P.seat_world_rot(P.CHECK_HINGE_DEG)
+    corners = np.vstack([box_hull(P.pin(TOP) + rs @ np.array(c), rs, s).vertices for c, s in P.seat_boxes()])
+    near = {side: round(float(np.linalg.norm((corners - BASES[side])[:, :2], axis=1).min()), 3) for side in BASES}
+    return {"nearest_to_base_m": near, "x_m": [round(float(corners[:, 0].min()), 3), round(float(corners[:, 0].max()), 3)],
+            "over_bench_m": [round(float(corners[:, 2].min() - TOP), 3), round(float(corners[:, 2].max() - TOP), 3)],
+            "onto_stop_Nm": round(-P.seat_torque(P.CHECK_HINGE_DEG), 3), "balance_deg": round(P.seat_balance_deg(), 1)}  # fmt: skip
 
 
 def run_offline() -> dict:
-    import demo_kit as kit
-
-    found, rows, ok = {}, {}, True
-    for name, (side, pos, rot, opening, deg, held, o, y) in poses().items():
+    rows, ok = {}, True
+    for name, (side, pos, rot, opening, held, o, y) in poses().items():
         q, mm, dg, margin = solve_pose(side, pos, rot)
-        found[name] = (side, q, opening, pos)
-        fixtures = scene_hulls(deg, o, y)
+        fixtures = scene_hulls(o, y)
         hulls = hand_hulls(side, q, opening)
-        body_links = [(n, h) for n, h in hulls if n not in FINGER_LINKS]
         clear = {}
         for k, v in fixtures.items():
-            if held == {"seat": "toilet_seat", "pan": "specimen_pan"}.get(k):
-                clear[k + " (wrist)"] = round(1000.0 * gap(body_links, v), 1)
+            mine = [(n, h) for n, h in hulls if n in HAND_LINKS] if k == "bench" else hulls
+            if k == "pan" and held == "specimen_pan":
+                clear["pan (wrist)"] = round(1000.0 * gap([(n, h) for n, h in mine if n not in FINGER_LINKS], v), 1)
             else:
-                clear[k] = round(1000.0 * gap(hulls, v), 1)
+                clear[k] = round(1000.0 * gap(mine, v), 1)
         good = mm <= IK_MM and dg <= IK_DEG and margin >= MARGIN_DEG and min(clear.values()) > 0.0
-        row = {"side": side, "at_m": [round(float(v), 4) for v in pos], "z_mm": round(1000.0 * (pos[2] - TOP), 1),
-               "ik_mm_deg": [round(mm, 3), round(dg, 3)], "margin_deg": round(margin, 1), "clear_mm": clear}  # fmt: skip
-        if held == "toilet_seat" and deg > 1.0:
-            force = seat_lift(deg) * seat_normal(deg)
-            torque = kit.point_jacobian(q, BASES[side]).T @ force
-            row["lift_N"] = round(float(np.linalg.norm(force)), 1)
-            row["torque_of_most"] = round(float(np.abs(torque / kit.JOINT_EFFORT).max()), 2)
-            good &= row["torque_of_most"] <= 0.8
-        row["ok"] = bool(good)
+        rows[name] = {"at_m": [round(float(v), 4) for v in pos], "z_mm": round(1000.0 * (pos[2] - TOP), 1),
+                      "ik_mm_deg": [round(mm, 3), round(dg, 3)], "margin_deg": round(margin, 1), "clear_mm": clear, "ok": bool(good)}  # fmt: skip
         ok &= good
-        rows[name] = row
-    pairs = {}
-    for a, b in TOGETHER:
-        (sa, qa, oa, pa), (sb, qb, ob, pb) = found[a], found[b]
-        hull_gap = gap(hand_hulls(sa, qa, oa), hand_hulls(sb, qb, ob))
-        good = hull_gap >= 0.020
-        ok &= good
-        pairs[f"{a} + {b}"] = {"tcp_apart_mm": round(1000.0 * float(np.linalg.norm(pa - pb)), 1), "hulls_apart_mm": round(1000.0 * hull_gap, 1), "ok": good}
-    # The carried pan against the raised seat and the deck (its own boxes: the seat must not touch it in passing).
-    sweep = {}
-    for name, origin, yaw in pan_path()[:-1]:
-        f = scene_hulls(SEAT_HOLD_DEG, origin, yaw)
-        sweep[name] = {k: round(1000.0 * gap(f["pan"], f[k]), 1) for k in ("seat", "deck", "bench")}
-        ok &= min(sweep[name].values()) >= 5.0
-    seat_up = {deg: round(seat_lift(deg), 1) for deg in (0, 20, int(SEAT_HOLD_DEG))}
-    return {"pass": bool(ok), "seat_lift_N": seat_up, "pan_sweep_mm": sweep, "poses": rows, "both_hands": pairs}
+    sweep = pan_sweep()
+    ok &= min(min(v.values()) for v in sweep.values()) >= 5.0
+    return {"pass": bool(ok), "pan_sweep_mm": sweep, "seat": seat_reach(), "poses": rows}
 
 
 def run_frame0(out_dir: Path) -> dict:
@@ -273,7 +263,7 @@ def run_frame0(out_dir: Path) -> dict:
     drift_mm = round(1000.0 * float(np.linalg.norm(m.mk.pose("specimen_pan")[0] - first[0])), 2)
     drift_deg = round(abs(m.seat_deg() - first[1]), 3)
     score = float(res.info.get("score", 0.0))
-    out = {"pass": score == 0.0 and m.STATE["zero"] is None and drift_mm < 1.0 and drift_deg < 0.2,
+    out = {"pass": score == 0.0 and m.STATE["zero"] is None and drift_mm < 1.0 and drift_deg < 0.2 and m.seat_up(),
            "drift_2s": {"pan_mm": drift_mm, "seat_deg": drift_deg}, "score_after_2s": score, "report": m.report()}  # fmt: skip
     (out_dir / "frame0.json").write_text(json.dumps(out, indent=1, default=str))
     return out

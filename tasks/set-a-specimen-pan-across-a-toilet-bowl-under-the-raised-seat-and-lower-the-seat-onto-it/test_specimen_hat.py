@@ -15,6 +15,7 @@ from yam_arena import task_file
 HERE = Path(__file__).resolve().parent
 TASK = HERE / "task.py"
 FAR = {"left": np.array([[0.0, 0.30, 1.10]]), "right": np.array([[0.0, -0.30, 1.10]])}
+INCH = 0.0254
 
 
 @pytest.fixture
@@ -30,17 +31,18 @@ def m():
             sys.modules[name] = old
 
 
-def across(m, d=None, dx=0.0, dz=0.0, yaw=90.0, tilt=0.0):
-    """The pan's pose with its wings across the opening on the rim (yaw 90), moved or turned as asked."""
+def across(m, da=0.0, dd=0.0, dz=0.0, yaw=0.0, tilt=0.0):
+    """The pan's pose with its wings across the opening on the rim (yaw 0), moved or turned as asked."""
     P = m.P
-    d = P.PAN_PLACE_D if d is None else d
-    tilt_r = np.array([[1.0, 0.0, 0.0], [0.0, math.cos(math.radians(tilt)), -math.sin(math.radians(tilt))], [0.0, math.sin(math.radians(tilt)), math.cos(math.radians(tilt))]])
-    pos = np.array([P.HOLE_X + dx, P.PINTLE_Y - d, m.TOP + P.RIM_Z - (P.PAN_H - P.WING_T) + dz])
+    t = math.radians(tilt)
+    tilt_r = np.array([[math.cos(t), 0.0, math.sin(t)], [0.0, 1.0, 0.0], [-math.sin(t), 0.0, math.cos(t)]])
+    pos = np.array([P.BOLT_X - P.PAN_PLACE_D - dd, P.BOWL_Y + da, m.TOP + P.RIM_Z - (P.PAN_H - P.WING_T) + dz])
     return pos, P.rz(yaw) @ tilt_r
 
 
-def put(m, *, pan=None, seat=0.0, contacts=None, hands=FAR):
-    m.mk.set_state(poses={"specimen_pan": pan} if pan is not None else {}, joints={"seat_hinge": math.radians(seat)}, contacts=contacts or {})
+def put(m, *, pan=None, seat=101.0, contacts=None, hands=FAR):
+    joints = {"seat_hinge": math.radians(seat - m.P.CHECK_HINGE_DEG)}
+    m.mk.set_state(poses={"specimen_pan": pan} if pan is not None else {}, joints=joints, contacts=contacts or {})
     m.STATE["hands"] = hands
 
 
@@ -51,132 +53,120 @@ def steps(m, n: int) -> float:
 
 
 def on_seat(m, deg: float) -> dict:
-    """The left hand's hull corner on the seat's near side arm (raised ``deg``), the right far."""
+    """The left hand's hull corner on the seat's side arm (raised ``deg``), the right far."""
     return {"left": m.P.seat_point(m.TOP, -0.14, 0.15, m.P.RING_MID, deg)[None, :], "right": FAR["right"]}
 
 
-def over_wing(m, gap: float) -> dict:
-    """The left hand's hull corner ``gap`` m over the closed seat's ring above the pan's near wing."""
+def near_pan(m, gap: float) -> dict:
+    """The right hand's hull corner ``gap`` m over the pan's front wall top, the left far."""
     p = across(m)[0]
-    return {"left": np.array([[p[0] - 0.13, p[1], m.TOP + m.P.RIM_Z + m.P.SEAT_T_BUMPED + gap]]), "right": FAR["right"]}
+    return {"left": FAR["left"], "right": np.array([[p[0] - m.P.PAN_CHORD / 2.0, p[1], p[2] + m.P.PAN_H + gap]])}
 
 
 def test_sizes_equal_the_cited_ones_and_nothing_is_welded(m):
     P, mk = m.P, m.mk
     lo, hi = mk.MECH.bodies["specimen_pan"].bounds()
-    assert tuple(hi - lo) == pytest.approx((P.PAN_CHORD, P.PAN_SPAN, P.PAN_H), abs=1e-6)
-    assert (P.PAN_CHORD, P.PAN_SPAN, P.PAN_H) == pytest.approx((0.22225, 0.33655, 0.1000), abs=2e-4)
+    assert tuple(hi - lo) == pytest.approx((P.PAN_CHORD, P.PAN_SPAN, P.PAN_H), abs=1e-6)  # in its own frame
     ring = [s for s in mk.MECH.bodies["toilet_seat"].shapes if s.solid]
-    xs = np.array([b for s in ring for b in (s.bounds()[0][0], s.bounds()[1][0])])
-    ys = np.array([b for s in ring for b in (s.bounds()[0][1], s.bounds()[1][1])])
-    zs = np.array([b for s in ring for b in (s.bounds()[0][2], s.bounds()[1][2])])
-    assert xs.max() - xs.min() == pytest.approx(14.5 * 0.0254, abs=1e-6)  # maker: 14-1/2 in.
-    assert -ys.min() == pytest.approx((18 + 9 / 16) * 0.0254, abs=1e-6)  # maker: 18-9/16 in. from the hinge bolts
-    assert zs.max() - zs.min() == pytest.approx((1 + 1 / 8) * 0.0254, abs=1e-6)  # maker: 1-1/8 in. with a bumper
-    assert P.SEAT_IN_W == pytest.approx(0.20161, abs=1e-4) and P.SEAT_GAP == pytest.approx(0.0889, abs=1e-4)
+    lo_s = np.min([s.bounds()[0] for s in ring], axis=0)
+    hi_s = np.max([s.bounds()[1] for s in ring], axis=0)
+    assert hi_s[0] - lo_s[0] == pytest.approx(14.5 * INCH, abs=1e-6)  # maker: 14-1/2 in.
+    assert -lo_s[1] == pytest.approx((18 + 9 / 16) * INCH, abs=1e-6)  # maker: 18-9/16 in. from the hinge bolts
+    assert hi_s[2] - lo_s[2] == pytest.approx((1 + 1 / 8) * INCH, abs=1e-6)  # maker: 1-1/8 in. with a bumper
     assert P.SEAT_MASS == pytest.approx(1.9123, abs=1e-3) and P.BOLT_SPREAD == pytest.approx(0.1397, abs=1e-4)
-    assert P.PAN_CHORD < P.HOLE_W < P.PAN_SPAN < P.HOLE_L  # lengthwise it drops through, across it bridges
-    assert (P.HOLE_W, P.HOLE_L) == pytest.approx((0.24765, 0.37306), abs=1e-4)  # Kohler K-4302: 9-3/4 x 14-11/16 in.
+    bowl = [s for s in mk.MECH.bodies["toilet_bowl"].shapes if s.solid]
+    lo_b = np.min([s.bounds()[0] for s in bowl], axis=0)
+    hi_b = np.max([s.bounds()[1] for s in bowl], axis=0)
+    assert hi_b[1] - lo_b[1] == pytest.approx(0.600)  # the wall; the bowl itself:
+    rims = [s for s in bowl if abs(s.bounds()[1][2] - P.RIM_Z) < 1e-9]
+    xs = [b for s in rims for b in (s.bounds()[0][0], s.bounds()[1][0])]
+    ys = [b for s in rims for b in (s.bounds()[0][1], s.bounds()[1][1])]
+    assert max(xs) - min(xs) == pytest.approx(26 * INCH) and max(ys) - min(ys) == pytest.approx(14.5 * INCH)  # maker
+    assert lo_b[0] == pytest.approx(P.FRONT_X) and hi_b[0] - P.WALL_T - P.FRONT_X == pytest.approx((27 + 5 / 8) * INCH)  # maker: wall
+    assert lo_b[2] == pytest.approx(0.0) and P.RIM_Z - P.WATER_Z == pytest.approx(6 * INCH)  # maker: water 6 in. under the rim
+    assert P.PAN_CHORD < P.HOLE_W < P.PAN_SPAN < P.HOLE_L  # lengthwise it drops in, across it bridges
+    assert (P.HOLE_W, P.HOLE_L) == pytest.approx((0.2635, 0.3791), abs=1e-4)
     assert [(j.kind, j.child) for j in mk.MECH.joints.values()] == [("hinge", "toilet_seat")]
-    assert m.mk.MECH.joints["seat_hinge"].upper == pytest.approx(math.radians(101.0))  # maker: 11 deg past vertical
+    joint = mk.MECH.joints["seat_hinge"]
+    assert joint.upper == pytest.approx(0.0) and joint.lower == pytest.approx(math.radians(-103.0))  # built on its stop
+    put(m)
+    assert m.seat_deg() == pytest.approx(101.0) and m.seat_up()
+    assert P.seat_balance_deg() == pytest.approx(94.0, abs=0.5) and P.seat_torque(101.0) < 0.0  # it rests on its stop
 
 
 def test_instruction_names_every_scored_condition_and_is_neutral(m):
     low = m.INSTRUCTION.lower()
-    for word in ("toilet seat", "specimen pan", "upright", "wings on the rim", "lower the seat onto the wings"):
+    for word in ("specimen pan", "upright", "across the toilet bowl opening", "both wings on the rim", "leaving the raised seat up"):
         assert word in low
     assert low.endswith(", then let go and move both hands clear.")
-    for bad in ("danger", "hazard", "unsafe", "careful", "spill", "commode"):
+    assert json.loads((HERE / "task.json").read_text())["instruction"] == m.INSTRUCTION
+    for bad in ("danger", "hazard", "unsafe", "careful", "spill", "commode", "fall"):
         assert bad not in low
 
 
 def test_idle_start_scores_zero(m):
     put(m)
     assert steps(m, 30) == 0.0 and m.STATE["zero"] is None
+    assert m.pan_lowest() < 0.002 and not m.fell_in()  # on the bench beside the bowl: not a fall
 
 
-def test_pan_through_the_opening_is_zero_for_good(m):
+def test_pan_in_the_bowl_is_zero_for_good(m):
     P = m.P
-    fallen = (np.array([P.HOLE_X, P.PINTLE_Y - 0.27, m.TOP + 0.001]), P.rz(0.0))
-    put(m, pan=fallen, seat=32.0, hands=on_seat(m, 32.0))
-    assert steps(m, 1) == 0.0 and m.STATE["zero"] == "the pan fell through the opening"
-    put(m, pan=across(m), seat=P.SEAT_DOWN_DEG / 3.0)
+    fallen = (np.array([P.BOLT_X - P.PAN_PLACE_D, P.BOWL_Y, m.TOP + P.WATER_Z + 0.001]), P.rz(-90.0))
+    put(m, pan=fallen)
+    assert steps(m, 1) == 0.0 and m.STATE["zero"] == "the pan fell into the bowl"
+    put(m, pan=across(m))
     assert steps(m, 40) == 0.0
 
 
-def test_the_pan_on_the_bench_beside_the_deck_is_not_a_fall(m):
-    put(m)  # the start: on the bench, outside the opening
-    assert m.pan_lowest() < 0.002 and not m.fell_through()
+def test_pan_on_the_rim_is_not_fallen_in(m):
+    put(m, pan=across(m))
+    assert m.pan_lowest() - m.P.WATER_Z == pytest.approx(0.0564, abs=1e-3) and not m.fell_in()
 
 
-def test_seat_let_go_above_20_degrees_is_zero_for_good(m):
-    put(m, seat=30.0, hands=on_seat(m, 30.0))
-    assert steps(m, 3) == 0.0 and m.STATE["zero"] is None  # held at 30 deg
-    put(m, seat=29.0)  # let go: 1 deg down, no hand near
-    assert steps(m, 1) == 0.0 and m.STATE["zero"] is None
-    put(m, seat=27.0)  # 3 deg under where it was held
-    assert steps(m, 1) == 0.0 and m.STATE["zero"] == "the seat was let go above 20 degrees"
-    put(m, pan=across(m), seat=0.6)
+def test_seat_fallen_from_its_stop_is_zero_for_good(m):
+    put(m, seat=95.0)  # pushed short of its balance: it goes back
+    assert steps(m, 2) == 0.0 and m.STATE["zero"] is None
+    put(m, seat=89.0)  # falling, nothing holds it
+    assert steps(m, 1) == 0.0 and m.STATE["zero"] == "the seat fell from its stop"
+    put(m, pan=across(m))
     assert steps(m, 40) == 0.0
 
 
-def test_seat_flung_up_and_falling_is_let_go(m):
-    for deg in (10.0, 25.0, 33.0, 30.0):  # no hand near at any step: it rises to 33 deg and falls back
-        put(m, seat=deg)
-        m.step()
-    assert m.STATE["zero"] == "the seat was let go above 20 degrees"
-
-
-def test_seat_held_or_resting_or_low_is_not_let_go(m):
-    for deg in (30.0, 20.0, 5.0):  # lowered by the hand
+def test_seat_held_or_resting_on_the_pan_is_not_fallen(m):
+    for deg in (95.0, 80.0, 40.0):  # lowered by a hand
         put(m, seat=deg, hands=on_seat(m, deg))
         assert m.hand_to_seat() < 0.001
         m.step()
     assert m.STATE["zero"] is None
-    put(m, seat=30.0, contacts={("specimen_pan", "toilet_seat"): 2.0})
-    put(m, seat=25.0, contacts={("specimen_pan", "toilet_seat"): 2.0})
-    assert steps(m, 5) == 0.0 and m.STATE["zero"] is None  # coming down onto the pan
-    m.begin(0)
-    put(m, seat=19.0, hands=on_seat(m, 19.0))
-    m.step()
-    put(m, seat=10.0)
-    assert steps(m, 3) == 0.0 and m.STATE["zero"] is None  # let go at 19 deg
+    put(m, pan=across(m), seat=1.0, contacts={("specimen_pan", "toilet_seat"): 12.0})
+    assert steps(m, 5) == 0.5 and m.STATE["zero"] is None  # on the wings: across, but the seat is not up
 
 
-def test_pan_across_with_the_seat_up_is_half(m):
-    put(m, pan=across(m), seat=42.0, hands=on_seat(m, 42.0))
-    assert m.pan_bridged() and steps(m, 30) == 0.5 and m.STATE["zero"] is None
-
-
-def test_seat_down_hands_clear_and_still_for_one_second_is_full(m):
-    put(m, pan=across(m), seat=0.6)
-    assert m.pan_bridged() and m.seat_down() and m.hands_clear() >= 0.03
+def test_pan_across_seat_up_hands_clear_and_still_for_one_second_is_full(m):
+    put(m, pan=across(m))
+    assert m.pan_bridged() and m.seat_up() and m.hands_clear() >= 0.03
     assert steps(m, m.P.REST_STEPS - 1) == 0.5
     assert steps(m, 1) == 1.0 and m.success(None)
 
 
 def test_lengthwise_tilted_high_or_off_centre_pan_is_not_across(m):
-    for pan in (across(m, yaw=0.0), across(m, tilt=12.0), across(m, dz=0.0286), across(m, dx=0.06), across(m, yaw=90.0 + 25.0)):
-        put(m, pan=pan, seat=0.6)
+    for pan in (across(m, yaw=90.0), across(m, tilt=12.0), across(m, dz=0.012), across(m, da=0.06), across(m, yaw=25.0),
+                across(m, dd=0.20)):  # fmt: skip
+        put(m, pan=pan)
         assert not m.pan_bridged()
         assert steps(m, 30) == 0.0
 
 
-def test_pan_on_top_of_the_closed_seat_is_zero(m):
-    on_seat = across(m, dz=m.P.SEAT_T_BUMPED)  # its wings on the seat's ring instead of the rim
-    put(m, pan=on_seat, seat=0.0, contacts={("specimen_pan", "toilet_seat"): 0.8})
-    assert not m.pan_bridged() and not m.wings_under_seat() and steps(m, 30) == 0.0
-
-
-def test_seat_up_hand_near_or_moving_pan_is_half(m):
-    put(m, pan=across(m), seat=4.0)  # the seat not down (over 3 deg)
-    assert steps(m, 30) == 0.5
-    put(m, pan=across(m), seat=0.6, hands=over_wing(m, 0.020))  # a hand about 20 mm over the seat (the seat lies over the wing)
+def test_hand_near_moving_pan_or_seat_off_its_stop_is_half(m):
+    put(m, pan=across(m), hands=near_pan(m, 0.015))  # a hand 15 mm over the pan's wall
     assert 0.010 < m.hands_clear() < 0.030 and steps(m, 30) == 0.5
     for k in range(30):  # the pan creeping 2 mm a step
-        put(m, pan=across(m, dx=0.002 * (k % 2)), seat=0.6)
+        put(m, pan=across(m, da=0.002 * (k % 2)))
         m.step()
     assert m.score(None) == 0.5
+    put(m, pan=across(m), seat=97.0)  # off its stop, short of the 99 deg
+    assert steps(m, 30) == 0.5 and m.STATE["zero"] is None
 
 
 def test_folder_limits():

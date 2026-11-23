@@ -3,122 +3,89 @@
 
     scripts/rta simpy <id> mech/tasks/specimen_hat/trials.py /workspace/robocurve/outputs/<id> [names]
 
-- ``seat_let_go``: the left hand raises the seat to 42 deg as in the demo, opens and draws back: the seat falls shut
-  and the let-go rule zeroes the trial (score 0).
-- ``lengthwise_falls_through``: with the seat held up as in the demo, the pan is put (``write_pose``, trials only)
-  lengthwise into the middle of the opening, its bottom 50 mm under the rim: nothing holds it and it falls to the
-  bench (score 0, the fall-through rule).
-- ``seat_left_up``: the demo with the seat held up to the end: the pan across the opening, the seat not lowered
-  (score 0.5).
-- ``pan_on_the_closed_seat``: the pan put across the closed seat, its wings on the ring (``write_pose``): it rests
-  there, wings 28.6 mm over the rim (score 0).
-- ``seat_past_upright``: the seat put at 98 deg (``set_joint``), past its balance: it leans back into the left arm at
-  rest, is pushed forward and falls shut (let-go zero).
+- ``lengthwise_falls_in``: the pan put (``write_pose``, trials only) lengthwise into the middle of the opening, its
+  bottom 50 mm under the rim: nothing holds it and it falls to the water surface (score 0, the fall-in rule).
+- ``seat_knocked_off``: the seat put (``set_joint``, trials only) at 92 deg, 2 deg short of its balance: it falls shut
+  onto the rim (score 0, the seat-fall rule).
+- ``seat_short_of_stop``: the seat put at 97 deg, past its balance: it goes back onto its stop by itself (no zero).
+- ``pan_still_held``: the demo until the wings rest on the rim, then the hand keeps its pinch (score 0.5).
 """
 
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
-
-import numpy as np
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-import checks as K  # noqa: E402
 import demo as D  # noqa: E402
 
-
-def _left_until_held() -> list:
-    return D.plan()["left"][:5]
+STILL = {"right": [], "left": []}
 
 
-def seat_let_go(emb, m, out: Path) -> dict:
+def _still(emb, out: Path, name: str, director, seconds: float = 3.0):
     import demo_kit as kit
 
-    left = _left_until_held() + [
-        kit.Move(0.5, grip=D.SEAT_OPEN, push=(0.0, 0.0, 0.0), label="let go"),
-        kit.Move(0.6, *K.left_on_seat(K.SEAT_HOLD_DEG, up=0.060), label="draw back"),
-        kit.Move(1.6, *D.ready("left"), label="ready"),
-    ]
-    res = kit.run(emb, {"left": left, "right": []}, out / "seat_let_go", seed=0, tail_s=1.0, record=False)
-    rep = res["report"]
-    return {"pass": rep["zero"] == "the seat was let go above 20 degrees" and res["info"].get("score") == 0.0, "report": rep}
+    return kit.run(emb, {"left": [kit.Move(seconds, label="still")], "right": []}, out / name, seed=0, director=director, tail_s=0.5, record=False)
 
 
-def lengthwise_falls_through(emb, m, out: Path) -> dict:
-    import demo_kit as kit
-
-    put = {}
-
-    def director(t, arms, pictures) -> None:
-        if t >= 6.6 and not put:  # the seat is up at 42 deg from 6.0 s
-            P = m.P
-            pos = (P.HOLE_X, P.PINTLE_Y - (P.HOLE_D0 + P.HOLE_L / 2.0), m.TOP + P.RIM_Z - 0.050)
-            m.mk.write_pose("specimen_pan", pos, tuple(float(v) for v in m.mk.matrix_to_quat(P.rz(0.0))))
-            put["t"] = round(t, 2)
-
-    left = _left_until_held() + [kit.Move(3.0, *K.left_on_seat(K.SEAT_HOLD_DEG), push=D.hold(K.SEAT_HOLD_DEG), label="hold up")]
-    res = kit.run(emb, {"left": left, "right": []}, out / "lengthwise_falls_through", seed=0, director=director, tail_s=0.5, record=False)
-    rep = res["report"]
-    ok = rep["zero"] == "the pan fell through the opening" and res["info"].get("score") == 0.0 and rep["pan_lowest_mm"] < 8.0
-    return {"pass": ok, "put_at_s": put.get("t"), "report": rep}
-
-
-def seat_left_up(emb, m, out: Path) -> dict:
-    import demo_kit as kit
-
-    full = D.plan()
-    held = [mv for mv in full["left"] if mv.label == "hold up"][0]
-    left = full["left"][: full["left"].index(held) + 1] + [kit.Move(4.0, *K.left_on_seat(K.SEAT_HOLD_DEG), push=D.hold(K.SEAT_HOLD_DEG), label="keep it up")]
-    res = kit.run(emb, {"left": left, "right": full["right"]}, out / "seat_left_up", seed=0, tail_s=0.5, record=False)
-    rep = res["report"]
-    return {"pass": res["info"].get("score") == 0.5 and rep["zero"] is None and rep["pan_bridged"], "report": rep}
-
-
-def pan_on_the_closed_seat(emb, m, out: Path) -> dict:
-    import demo_kit as kit
-
+def lengthwise_falls_in(emb, m, out: Path) -> dict:
     put = {}
 
     def director(t, arms, pictures) -> None:
         if t >= 0.5 and not put:
             P = m.P
-            pos = (P.HOLE_X, P.PINTLE_Y - P.PAN_PLACE_D, m.TOP + P.RIM_Z + P.SEAT_T_BUMPED - (P.PAN_H - P.WING_T) + 0.002)
-            m.mk.write_pose("specimen_pan", pos, tuple(float(v) for v in m.mk.matrix_to_quat(P.rz(90.0))))
+            pos = (P.BOLT_X - (P.HOLE_D0 + P.HOLE_D1) / 2.0, P.BOWL_Y, m.TOP + P.RIM_Z - 0.050)
+            m.mk.write_pose("specimen_pan", pos, tuple(float(v) for v in m.mk.matrix_to_quat(P.rz(-90.0))))
             put["t"] = round(t, 2)
 
-    res = kit.run(emb, {"left": [kit.Move(3.0, label="still")], "right": []}, out / "pan_on_the_closed_seat", seed=0, director=director, tail_s=0.5, record=False)
+    res = _still(emb, out, "lengthwise_falls_in", director)
     rep = res["report"]
-    ok = res["info"].get("score") == 0.0 and not rep["pan_bridged"] and min(rep["wing_tips_over_rim_mm"]) > 20.0
-    return {"pass": ok, "report": rep}
+    ok = rep["zero"] == "the pan fell into the bowl" and res["info"].get("score") == 0.0 and rep["pan_lowest_over_water_mm"] < 8.0
+    return {"pass": ok, "put_at_s": put.get("t"), "report": rep}
 
 
-def seat_past_upright(emb, m, out: Path) -> dict:
-    """The seat put (``set_joint``, trials only) at 98 deg, past its balance at 94 deg, both arms at rest: it leans back
-    into the left arm (its rest pose reaches the seat from 94 deg), is pushed forward and falls shut (let-go zero)."""
-    import math
-
-    import demo_kit as kit
-
-    seen = {"put": None, "arm": False}
+def _seat_put(emb, m, out: Path, name: str, deg: float) -> dict:
+    seen = {"put": None}
 
     def director(t, arms, pictures) -> None:
         if t >= 0.5 and seen["put"] is None:
-            m.mk.set_joint("seat_hinge", math.radians(98.0))
+            m.mk.set_joint("seat_hinge", math.radians(deg - m.P.CHECK_HINGE_DEG))
             seen["put"] = round(t, 2)
-        elif seen["put"] is not None and m.mk.touching("toilet_seat", "left robot", within=0.002):
-            seen["arm"] = True
 
-    res = kit.run(emb, {"left": [kit.Move(3.0, label="still")], "right": []}, out / "seat_past_upright", seed=0, director=director, tail_s=0.5, record=False)
+    res = _still(emb, out, name, director)
+    return {"put_at_s": seen["put"], "score": res["info"].get("score"), "report": res["report"]}
+
+
+def seat_knocked_off(emb, m, out: Path) -> dict:
+    res = _seat_put(emb, m, out, "seat_knocked_off", 92.0)
     rep = res["report"]
-    ok = seen["arm"] and rep["zero"] == "the seat was let go above 20 degrees" and rep["seat_deg"] < 1.0
-    return {"pass": ok, "touched_left_arm": seen["arm"], "report": rep}
+    res["pass"] = rep["zero"] == "the seat fell from its stop" and rep["seat_deg"] < 5.0 and res["score"] == 0.0
+    return res
 
 
-TRIALS = {f.__name__: f for f in (seat_let_go, lengthwise_falls_through, seat_left_up, pan_on_the_closed_seat, seat_past_upright)}
+def seat_short_of_stop(emb, m, out: Path) -> dict:
+    res = _seat_put(emb, m, out, "seat_short_of_stop", 97.0)
+    rep = res["report"]
+    res["pass"] = rep["zero"] is None and rep["seat_up"] and rep["min_seat_deg"] < 98.0
+    return res
+
+
+def pan_still_held(emb, m, out: Path) -> dict:
+    import demo_kit as kit
+
+    right = D.plan()["right"]
+    k = [mv.label for mv in right].index("wings on the rim")
+    right = right[: k + 1] + [kit.Move(4.0, right[k].pos, right[k].rot, label="keep the pinch")]
+    res = kit.run(emb, {"left": [], "right": right}, out / "pan_still_held", seed=0, tail_s=0.5, record=False)
+    rep = res["report"]
+    return {"pass": res["info"].get("score") == 0.5 and rep["zero"] is None and rep["pan_bridged"], "report": rep}
+
+
+TRIALS = {f.__name__: f for f in (lengthwise_falls_in, seat_knocked_off, seat_short_of_stop, pan_still_held)}
 
 
 def main() -> int:
