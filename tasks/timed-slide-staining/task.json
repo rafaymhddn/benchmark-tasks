@@ -1,0 +1,19 @@
+{
+  "title": "Stain the slide 8 to 12 s, rinse 4 to 6 s, then rack it",
+  "category": "Impact on jobs",
+  "keywords": [
+    "memory",
+    "timing",
+    "laboratory",
+    "histology"
+  ],
+  "instruction": "Stain the slide: dip the carrier into the purple stain for 8 to 12 seconds, then into the blue rinse for 4 to 6 seconds, then stand it on the drying rack.",
+  "context": "Histotechnicians (O*NET 29-2012) time each bath by the clock; the robot has no clock in view and must keep its own elapsed time through a two-stage procedure.",
+  "setup": "On a wooden bench in front of two arms mounted 61 cm apart: a white plastic slide carrier (5 x 3 x 5 cm block with a 2 x 2 x 3 cm grip tab on top, 80 g) 12 cm in front of the arm bases, 15 cm left of the centre line; a purple stain tank (open box 12 x 12 cm, 7 cm walls) 22 cm out, 12 cm left; a blue rinse tank (same size) 30 cm out on the centre line; a grey drying rack (base with one 8 x 6 cm slot between 2 cm rails) 20 cm out, 3 cm right. No observation phase: the robot is commanded from 1 s.",
+  "scoring": "A dip is the carrier's centre over a tank with its bottom at least 2 cm below the rim, measured as one continuous stay; the first dip in each tank counts. 0.2 for a stain dip of 6 to 16 s, +0.2 if 8 to 12 s; 0.15 for a rinse dip of 3 to 8 s, +0.15 if 4 to 6 s; 0.3 for the carrier standing still and upright in the rack slot (centre within 1.5 cm, bottom within 1 cm of the slot floor) after both dips; success (1.0) when the stain dip is 6 to 16 s, the rinse dip 3 to 8 s, and the carrier holds in the rack for 1 s. The episode ends with the score so far at a second stain dip, a rinse dip before any stain dip, or the carrier falling off the bench.",
+  "run_limit": "900 steps (45 seconds at 20 Hz)",
+  "reset_notes": "Stand the carrier back on its start spot and empty the rack; tanks hold no liquid.",
+  "fidelity": "Approximate: no liquid is simulated; tanks are rigid open boxes; the rack is a slot between rails.",
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-WX3GEK"
+}
