@@ -1,0 +1,19 @@
+{
+  "title": "Replace the memory module whose indicator lit during boot",
+  "category": "Impact on AI timelines",
+  "keywords": [
+    "memory",
+    "brief signal",
+    "server maintenance",
+    "data centre"
+  ],
+  "instruction": "During boot the light next to the faulty memory module came on. Pull that module, put it in the RMA tray, and seat the spare in its slot.",
+  "context": "Data-centre hardware work: a fault indicator lights briefly during boot and is dark by the time the technician can act. The robot must remember which of four identical modules was flagged.",
+  "setup": "On a wooden bench in front of two arms mounted 61 cm apart: a green plastic board (16 x 24 x 1 cm, fixed) 26 cm in front of the arm bases on the centre line, carrying four slots (rails 3 cm apart, 1.5 cm high, 12 cm long, running away from the arms) at 2.5 cm and 7.5 cm left and right of the centre line, each holding an identical black plastic module (11 x 1 x 6 cm, 20 g) standing upright; 11 cm out, a spare module standing in a grey holder (one slot of the same kind) 4.5 cm left of the centre line and an open grey RMA tray (14 x 6 cm, 3 cm walls) 4.5 cm right. During the first 4.5 s, while the arms are held still, the operator places a red 1 cm cube on the board at the far end of one slot from 1 s to 3.5 s and removes it; the flagged slot changes between trials (cycles through all four). The robot is commanded from 4.5 s.",
+  "scoring": "0.25 when the flagged module has been lifted 5 cm; 0.25 when it rests inside the RMA tray (centre over the tray floor, bottom within 3 cm of it, still); 0.5 when the spare stands in the flagged slot (centre within 0.8 cm of the slot centre and 2 cm along it, bottom within 0.5 cm of the slot floor, tilt under 10 degrees, still); success (1.0) when the module is in the tray and the spare is seated for 1 s. The episode ends with the score so far if any unflagged module is lifted 2 cm, or a module falls off the bench.",
+  "run_limit": "1200 steps (60 seconds at 20 Hz), including the 4.5 s observation phase during which actions are ignored",
+  "reset_notes": "Stand the four modules in the board slots and the spare in its holder, empty the tray; pick the next flagged slot and show the red cube at its far end for 2.5 s.",
+  "fidelity": "Approximate: the indicator is a removable red cube rather than an LED; modules are rigid plastic blocks; slots are rails on a plate.",
+  "scores": "Dream-1 run: 0.0; demo: 1.0",
+  "media": "M-J6WNCE"
+}
