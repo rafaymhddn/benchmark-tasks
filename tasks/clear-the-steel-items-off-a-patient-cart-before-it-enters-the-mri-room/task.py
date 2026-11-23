@@ -7,8 +7,8 @@ laminated-steel padlock and forged-steel dressmaker shears (bent handles up), be
 emesis basin and an all-plastic A5 clipboard.
 
 The steel items must leave the tray for the holding bin without ever crossing the doorway line or leaving the
-bench; the plastic ones must stay undisturbed on the tray. Everything is a free rigid body; nothing is jointed,
-welded, pushed or latched.
+bench; the plastic ones must be back on the tray, upright, at the end (moving or lifting them on the way costs
+nothing). Everything is a free rigid body; nothing is jointed, welded, pushed or latched.
 """
 
 from __future__ import annotations
@@ -81,17 +81,29 @@ def binned() -> list[str]:
 
 
 def inside_tray_xy(name: str) -> bool:
-    """Whether body ``name``'s centre lies over the tray's inside rectangle."""
+    """Whether body ``name``'s frame origin (a safe item's base centre) lies at least SAFE_INSET inside the tray's
+    outer edge."""
     position, _ = mk.pose(name)
     local_centre = in_frame(position[None, :], "tray")[0]
-    return bool(abs(local_centre[0]) <= P.TRAY_D / 2.0 - P.TRAY_WALL - 0.003
-                and abs(local_centre[1]) <= P.TRAY_W / 2.0 - P.TRAY_WALL - 0.003)
+    return bool(abs(local_centre[0]) <= P.TRAY_D / 2.0 - P.SAFE_INSET
+                and abs(local_centre[1]) <= P.TRAY_W / 2.0 - P.SAFE_INSET)
+
+
+def floor_gap(name: str) -> float:
+    """m from the tray floor up to body ``name``'s lowest solid corner, in the tray's frame (negative: under it)."""
+    return float(in_frame(corners(name), "tray")[:, 2].min()) - P.TRAY_WALL
+
+
+def tilt(name: str) -> float:
+    """Degrees between body ``name``'s up axis as built (the bottle's axis, the dish's and the clipboard's normals)
+    and the vertical."""
+    up = mk.pose(name)[1] @ (mk.built_pose(name)[1].T @ np.array([0.0, 0.0, 1.0]))
+    return math.degrees(math.acos(min(1.0, max(-1.0, float(up[2])))))
 
 
 def on_tray(name: str) -> bool:
-    """``name`` rests on the tray: its centre over the tray's inside rectangle, its lowest corner on the floor."""
-    local_low = float(in_frame(corners(name), "tray")[:, 2].min())
-    return inside_tray_xy(name) and -0.004 <= local_low <= P.TRAY_WALL + 0.010
+    """``name`` rests on the tray: its frame origin over the tray, its lowest corner within SAFE_REST of the floor."""
+    return inside_tray_xy(name) and abs(floor_gap(name)) <= P.SAFE_REST
 
 
 def displaced(name: str) -> float:
@@ -100,15 +112,16 @@ def displaced(name: str) -> float:
     return float(math.hypot(float(now[0] - built[0]), float(now[1] - built[1])))
 
 
-def safe_left(name: str) -> str | None:
-    """Why safe item ``name`` counts as removed from the tray at this step, or None if it still sits there."""
-    if displaced(name) > P.SAFE_MOVE:
-        return f"the {name} was moved"
-    low = float(in_frame(corners(name), "tray")[:, 2].min())
-    if not inside_tray_xy(name) or low < -0.004:
-        return f"the {name} left the tray"
-    if low > P.TRAY_WALL + P.SAFE_LIFT:
-        return f"the {name} was lifted off the tray"
+def safe_off(name: str) -> str | None:
+    """Why safe item ``name`` fails the end test of every positive level at this step, or None when it is back on the
+    tray: base centre at least 5 mm inside the outer edge, lowest point within 10 mm of the floor, tilted at most 20
+    degrees. Moving or lifting it on the way is never penalised."""
+    if not inside_tray_xy(name):
+        return f"the {name} is off the tray"
+    if abs(floor_gap(name)) > P.SAFE_REST:
+        return f"the {name} is not resting on the tray floor"
+    if tilt(name) > P.SAFE_TILT:
+        return f"the {name} is tipped over"
     return None
 
 
@@ -134,10 +147,7 @@ def cleared(name: str) -> bool:
 
 
 def zero_now() -> str | None:
-    for n in SAFE:
-        why = safe_left(n)
-        if why is not None:
-            return why
+    """The whole-trial latch, steel items only: a safe item may be moved or lifted (safe_off reads it at the end)."""
     for n in STEEL:
         if past_door(n):
             return f"the {n} crossed the Zone IV line"
@@ -196,6 +206,8 @@ def hands_clear() -> float:
 
 # --- the score --------------------------------------------------------------------------------------------------------------
 def raw_tier() -> float:
+    if any(safe_off(n) is not None for n in SAFE):  # every positive level: all three safe items back on the tray
+        return 0.0
     count = len(binned())
     if count == 3:
         return 1.0
@@ -233,15 +245,16 @@ def level() -> float:
 
 
 def score(objects) -> float:
-    """0 for good if any safe item (bottle, dish, clipboard) is ever removed from the tray (centre outside the
-    tray's inside rectangle, lowest point > 40 mm over the tray floor, or horizontal drift > 30 mm from start),
-    or if any steel item ever has any solid corner cross the red Zone IV doorway line (x >= 62.5 cm) or leave the
-    bench. Otherwise read at the end: every positive score level requires all three safe items on the tray within
-    30 mm of start, every part of both hands >= 30 mm clear of the tray, the bin and every item, and every body
-    moving at most 3 mm over 1.0 s (20 steps). 1.0 when all three steel items lie wholly in the bin (every solid
-    corner inside its opening and >= 5 mm under the rim). 0.5 when two steel items lie wholly in the bin and the
-    third is cleared on the safe side of the bench (every solid corner outside the tray's outer rectangle, resting
-    with its lowest point <= 10 mm over the bench top). 0 otherwise."""
+    """0 for good if any steel item (clamp, padlock, shears) ever has any solid corner cross the red Zone IV doorway
+    line (x >= 62.5 cm) or leave the bench; moving or lifting a safe item (bottle, dish, clipboard) never zeroes.
+    Otherwise read at the end: every positive score level requires all three safe items back on the tray (base
+    centre >= 5 mm inside the tray's 35 x 45 cm outer edge, lowest point within 10 mm of the tray floor, tilted
+    <= 20 degrees from vertical as it started: bottle standing, dish open side up, clipboard face up), every part of
+    both hands >= 30 mm clear of the tray, the bin and every item, and every body moving at most 3 mm over 1.0 s
+    (20 steps). 1.0 when all three steel items lie wholly in the bin (every solid corner inside its opening and
+    >= 5 mm under the rim). 0.5 when two steel items lie wholly in the bin and the third is cleared on the safe side
+    of the bench (every solid corner outside the tray's outer rectangle, resting with its lowest point <= 10 mm over
+    the bench top). 0 otherwise."""
     return level()
 
 
@@ -251,11 +264,13 @@ def success(objects) -> bool:
 
 def report() -> dict:
     out = {"zero": STATE.get("zero"), "hold steps": STATE.get("hold", 0),
-           "in bin": binned(), "safe removed": {n: safe_left(n) for n in SAFE}}
+           "in bin": binned(), "safe off tray": {n: safe_off(n) for n in SAFE}}
     if mk.MECH.poses:
         out.update({"on tray": {n: on_tray(n) for n in (*STEEL, *SAFE)},
                     "cleared": {n: cleared(n) for n in STEEL},
                     "moved (mm)": {n: round(1000.0 * displaced(n), 1) for n in (*STEEL, *SAFE)},
+                    "safe tilt (deg)": {n: round(tilt(n), 1) for n in SAFE},
+                    "safe floor gap (mm)": {n: round(1000.0 * floor_gap(n), 1) for n in SAFE},
                     "centres (m)": {n: [round(float(v), 4) for v in mk.pose(n)[0][:2]] for n in (*STEEL, *SAFE)},
                     "hands clear (mm)": round(1000.0 * hands_clear(), 1), "score": score(None)})  # fmt: skip
     return out

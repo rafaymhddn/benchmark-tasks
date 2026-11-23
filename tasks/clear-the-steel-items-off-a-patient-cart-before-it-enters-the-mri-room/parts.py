@@ -128,8 +128,9 @@ RELEASES = {"padlock": (0.165, -0.415), "clamp": (0.235, -0.395), "shears": (0.2
 OVER = 0.001  # m: free bodies are built this far over their support so they settle and are drawn from the first picture
 
 # --- the score's limits (task.py, task.json, README: the same numbers) ------------------------------------------------------
-SAFE_MOVE = 0.030  # m: a safe item this far from its start is moved
-SAFE_LIFT = 0.040  # m: a safe item's lowest point this high over the tray floor has been lifted clear
+SAFE_INSET = 0.005  # m: a safe item back on the tray has its base centre at least this far inside the tray's outer edge
+SAFE_REST = 0.010  # m: ... its lowest point within this of the tray floor (resting on it: not held up)
+SAFE_TILT = 20.0  # deg: ... and its up axis (bottle axis, dish and clipboard normals) at most this far off vertical
 BIN_SINK = 0.005  # m: an item in the bin reaches at least this far under its rim
 BENCH_REST_Z = 0.010  # m: a cleared item on the bench has its lowest corner at most this far over the bench top
 HANDS_CLEAR = 0.030  # m: both hands this far from the tray, the bin and every item for every positive score level

@@ -108,33 +108,51 @@ def test_at_rest_it_scores_nothing(m):
     assert steps(m, 5) == 0.0 and m.STATE["zero"] is None and m.binned() == []
 
 
-@pytest.mark.parametrize("name,move", [("bottle", 0.050), ("dish", 0.050), ("clipboard", 0.050)])
-def test_a_moved_safe_item_loses_the_trial_for_good(m, name, move):
-    put(m, placed(m, name, (getattr(m.P, {"bottle": "BOTTLE_AT", "dish": "DISH_AT", "clipboard": "CLIP_AT"}[name])[0] + move,
-                            getattr(m.P, {"bottle": "BOTTLE_AT", "dish": "DISH_AT", "clipboard": "CLIP_AT"}[name])[1], m.TOP + 0.003)))
-    steps(m, 1)
-    assert m.STATE["zero"] == f"the {name} was moved"
-    put(m, {**in_the_bin(m, "clamp"), **in_the_bin(m, "padlock"), **in_the_bin(m, "shears", y=-0.0105)})
-    assert steps(m, m.P.HOLD_STEPS + 5) == 0.0 and not m.success(None)
+SAFE_AT = {"bottle": "BOTTLE_AT", "dish": "DISH_AT", "clipboard": "CLIP_AT"}
 
 
-def test_a_lifted_safe_item_latches_only_past_40mm(m):
-    # 15 mm, 20 mm and 38 mm above the tray floor stay within the 40 mm rule (must NOT latch 0):
-    for lift in (0.015, 0.020, 0.038):
-        put(m, placed(m, "dish", (m.P.DISH_AT[0], m.P.DISH_AT[1], m.TOP + m.P.TRAY_FLOOR + lift)))
-        assert steps(m, 2) == 0.0 and m.STATE["zero"] is None
-    # Returning to rest on the tray with all three steel items in the bin still reaches 1.0:
-    put(m, {**placed(m, "dish", (m.P.DISH_AT[0], m.P.DISH_AT[1], m.TOP + m.P.TRAY_FLOOR + 0.001)),
-            **in_the_bin(m, "clamp"), **in_the_bin(m, "padlock"), **in_the_bin(m, "shears", y=-0.0105)})
-    assert steps(m, m.P.HOLD_STEPS) == 1.0
-    # Past 40 mm over the tray floor latches 0 for good:
-    m.begin(0)
-    put(m, placed(m, "dish", (m.P.DISH_AT[0], m.P.DISH_AT[1], m.TOP + m.P.TRAY_FLOOR + 0.045)))
-    steps(m, 1)
-    assert m.STATE["zero"] == "the dish was lifted off the tray"
-    put(m, {**placed(m, "dish", (m.P.DISH_AT[0], m.P.DISH_AT[1], m.TOP + m.P.TRAY_FLOOR + 0.001)),
-            **in_the_bin(m, "clamp"), **in_the_bin(m, "padlock"), **in_the_bin(m, "shears", y=-0.0105)})
-    assert steps(m, m.P.HOLD_STEPS + 5) == 0.0
+def three_binned(m) -> dict:
+    return {**in_the_bin(m, "clamp"), **in_the_bin(m, "padlock"), **in_the_bin(m, "shears", y=-0.0105)}
+
+
+@pytest.mark.parametrize("name", ["bottle", "dish", "clipboard"])
+def test_a_safe_item_lifted_and_moved_away_never_zeroes_and_counts_once_back_on_the_tray(m, name):
+    x, y = getattr(m.P, SAFE_AT[name])
+    floor = m.TOP + m.P.TRAY_FLOOR + 0.001
+    # Held 12 cm over its place, set on the bench past the doorway line (plastic: no latch), set beside the tray:
+    for place in ((x, y, floor + 0.120), (0.700, y, m.TOP + 0.001), (x, 0.400, m.TOP + 0.001)):
+        put(m, {**three_binned(m), **placed(m, name, place)})
+        assert steps(m, m.P.HOLD_STEPS + 2) == 0.0 and m.STATE["zero"] is None and m.safe_off(name) is not None
+    # Back on the tray 50 mm from its start: the end state earns the full level.
+    put(m, {**three_binned(m), **placed(m, name, (x - 0.050, y, floor))})
+    assert m.safe_off(name) is None and m.displaced(name) == pytest.approx(0.050)
+    assert steps(m, m.P.HOLD_STEPS - 1) == 0.0 and steps(m, 1) == 1.0 and m.STATE["zero"] is None
+
+
+@pytest.mark.parametrize("name,deg,level", [("bottle", 15.0, 1.0), ("bottle", 25.0, 0.0), ("bottle", 90.0, 0.0),
+                                            ("dish", 180.0, 0.0), ("clipboard", 180.0, 0.0)])
+def test_a_safe_item_back_on_the_tray_must_be_upright_within_20_degrees(m, name, deg, level):
+    x, y = getattr(m.P, SAFE_AT[name])
+    turn = m.mk.axis_angle((1.0, 0.0, 0.0), math.radians(deg))
+    steel = {k: at(m, k, *v) for k, v in three_binned(m).items()}
+    m.mk.set_state(poses={**steel, name: (np.array([x, y, m.TOP]), turn)})
+    rise = 0.001 - m.floor_gap(name)  # its lowest corner 1 mm over the tray floor
+    m.mk.set_state(poses={**steel, name: (np.array([x, y, m.TOP + rise]), turn)})
+    m.STATE["hands"] = FAR
+    assert m.floor_gap(name) == pytest.approx(0.001) and m.tilt(name) == pytest.approx(deg)
+    assert (m.safe_off(name) is None) == (level > 0.0)
+    assert steps(m, m.P.HOLD_STEPS + 1) == level and m.STATE["zero"] is None
+
+
+def test_every_positive_level_needs_all_three_safe_items_back_on_the_tray(m):
+    half = {**in_the_bin(m, "clamp"), **in_the_bin(m, "padlock"), **placed(m, "shears", (0.300, 0.400, m.TOP + 0.003))}
+    bx, by = m.P.BOTTLE_AT
+    for steel, level in ((three_binned(m), 1.0), (half, 0.5)):
+        put(m, {**steel, **placed(m, "bottle", (bx, 0.300, m.TOP + 0.001))})  # left on the bench beside the tray
+        assert steps(m, m.P.HOLD_STEPS + 5) == 0.0 and m.STATE["zero"] is None
+        assert m.safe_off("bottle") == "the bottle is off the tray"
+        put(m, {**steel, **placed(m, "bottle", (bx, by, m.TOP + m.P.TRAY_FLOOR + 0.001))})
+        assert steps(m, m.P.HOLD_STEPS) == level
 
 
 def test_two_in_the_bin_with_the_third_still_on_the_tray_is_zero(m):

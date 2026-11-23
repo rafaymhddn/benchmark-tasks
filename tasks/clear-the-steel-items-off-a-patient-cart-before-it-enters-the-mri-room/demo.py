@@ -146,7 +146,7 @@ def main() -> int:
                 "first 0.5 at (s)": first["0.5"], "first 1.0 at (s)": first["1.0"],
                 "steps": len(rows), "in bin at the end": rows[-1]["extra"]["in bin"],
                 "zero at the end": rows[-1]["extra"]["zero"], "hold steps at the end": rows[-1]["extra"]["hold"],
-                "moved (mm)": m.report()["moved (mm)"], "safe removed": m.report()["safe removed"],
+                "moved (mm)": m.report()["moved (mm)"], "safe off tray": m.report()["safe off tray"],
                 "worst IK": result.get("worst_ik"), "median step (ms)": result.get("median_step_ms")}  # fmt: skip
     (folder / "readings.json").write_text(json.dumps(readings, indent=1, default=str))
     print("READINGS " + json.dumps(readings, default=str), flush=True)
